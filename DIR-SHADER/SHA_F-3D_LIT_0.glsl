@@ -44,13 +44,14 @@ vec3 __COL(float RAT)
 
 void main()
 {
-	// STEP 0: GRAB COLOR FROM TEXTURE
-	vec3 TEX_COL = texture(ATL, TEX_OUT).rgb;
+	// STEP 1: GRAB COLOR FROM TEXTURE
+
+	vec3 COL_TEX = texture(ATL, TEX_OUT).rgb;
 	//vec3 COL = __COL(FRC_COL);
 	//COL = mix(COL, vec3(1.0, 1.0, 1.0), 0.875); // brighten it up a bit before lighting
 	
 	
-	// STEP 1: LIGHT DIRECTION AND DISTANCE
+	// STEP 2: LIGHT DIRECTION AND DISTANCE
 	
 	vec3 POS_BLC = floor(POS_ACT_OUT - NML_OUT * 0.5);
 	vec3 POS_BLC_CTR = POS_BLC + vec3(0.5);
@@ -59,29 +60,48 @@ void main()
 	LIT_DIR = normalize(LIT_DIR); // magnitude of 1
 	
 	
-	// STEP 2: ATTENUATION (LIGHT FALLOFF)
+	// STEP 3: ATTENUATION (LIGHT FALLOFF)
 	
 	float LIT_ATN = LIT_INT * (1.0 - clamp(LIT_DIS / LIT_RAD, 0.0, 1.0));
 	//float LIT_ATN = LIT_INT / (1.0 + LIT_DIS * LIT_DIS * 1); // last number is arbitrary; inverse relationship with world position scale
 	//LIT_ATN *= 1.0 - clamp(LIT_DIS / LIT_RAD, 0.0, 1.0); // without this, light would never be 0 (just approaches it); but when distance > light radius here, it ensures 0
 	
 	
-	// STEP 3: DIFFUSE LIGHTING (SURFACE ANGLE)
+	// STEP 4: DIFFUSE LIGHTING (SURFACE ANGLE)
 	
 	float LIT_DIF = max(dot(normalize(NML_OUT), LIT_DIR), 0.0); // less brightness if it's coming at an angle to surface
-	
-	
-	// STEP 4: AMBIENT LIGHTING
-	
-	float LIT_AMB = 0.15; // hard-coded so every surface gets at least some brightness to prevent full black
-	
-	
-	// STEP 5: COMBINE
-	
-	vec3 LIT = (LIT_AMB + LIT_DIF * LIT_ATN) * LIT_COL;
 
 
-	// STEP 6: OUTPUT COLOR
+	// STEP 5: FACE SHADING (DEPTH ILLUSION)
 
-	COL_FNL = vec4(TEX_COL * LIT, 1.0);
+	float COL_SHD;
+
+	if (NML_OUT.y > 0.5) {
+	    COL_SHD = 1.0;    // top
+	} else if (NML_OUT.y < -0.5) {
+	    COL_SHD = 0.7;    // bottom
+	} else if (NML_OUT.z > 0.5) {
+	    COL_SHD = 0.9;    // front
+	} else if (NML_OUT.z < -0.5) {
+	    COL_SHD = 0.9;    // back
+	} else if (NML_OUT.x > 0.5) {
+	    COL_SHD = 0.8;    // right
+	} else {
+	    COL_SHD = 0.8;    // left
+	}
+	
+	
+	// STEP 6: AMBIENT LIGHTING
+	
+	float LIT_AMB = 0.875; // hard-coded so every surface gets at least some brightness to prevent full black
+	
+	
+	// STEP 7: COMBINE
+	
+	vec3 COL_LIT = (LIT_AMB + LIT_DIF * LIT_ATN) * (LIT_COL * 0.5);
+
+
+	// STEP 8: OUTPUT COLOR
+
+	COL_FNL = vec4(COL_TEX * COL_LIT * COL_SHD, 1.0);
 }

@@ -34,6 +34,7 @@ _LIT_COL           = tuple(map(float, os.getenv('LIT_COL').split(',')))
 _SIZ               = int(os.getenv('SIZ'))
 _POS               = tuple(map(float, os.getenv('POS').split(',')))
 _SPD               = float(os.getenv('SPD'))
+_SPD_MAG           = float(os.getenv('SPD_MAG'))
 
 # main.py
 _THD_CNT           = int(os.getenv('THD_CNT'))
@@ -288,6 +289,14 @@ def main():
             if E.type == pygame.KEYDOWN and E.key == pygame.K_RCTRL:
                 # wireframe toggle for debugging
                 dbg_see = not dbg_see
+            
+            if E.type == pygame.MOUSEBUTTONDOWN:
+                if E.button == 3:
+                    cam._SPD_SET(_SPD * _SPD_MAG)
+
+            if E.type == pygame.MOUSEBUTTONUP:
+                if E.button == 3:
+                    cam._SPD_SET(_SPD)
 
         mos_rel = pygame.mouse.get_rel() # get the relative movement of the mouse since the last call to this function
         key_arr = pygame.key.get_pressed() # get the current state of all keyboard buttons
@@ -296,6 +305,13 @@ def main():
 
         # update light position
         lit_pos = cam.pos
+
+        # snap light position
+        lit_pos_fix = [
+            math.floor(cam.pos[0]) + 0.5,
+            math.floor(cam.pos[1]) + 0.5,
+            math.floor(cam.pos[2]) + 0.5
+        ]
 
         if cnt % 120 == 0:
             dbg.__DBG(dbg._TAG_DBG, ['cam.pos'], [cam.pos])
@@ -311,7 +327,7 @@ def main():
         mat_v = mat._GEN_MAT_V(cam.pos, cam.rot) # generate the view matrix based on the camera's position and rotation
         
         uni._UNI_MAT(pro_sha, mat_m, mat_v, mat_p) # set the uniform variables for the main shader program (model, view, projection matrices)
-        uni._UNI_ETC(pro_sha, tex_id, lit_pos, lit_rad, lit_int, lit_col) # set other uniform variables (e.g. textures)
+        uni._UNI_ETC(pro_sha, tex_id, lit_pos_fix, lit_rad, lit_int, lit_col) # set other uniform variables (e.g. textures)
 
         vao_blc, vtx_cnt_blc = map._MAP_GET() # get the vertex array object and vertex count for rendering the blocks in the scene; this will be updated dynamically based on the chunks that are loaded and the blocks they contain, allowing for efficient rendering of only the visible blocks with the appropriate texture coordinates from the atlas
 

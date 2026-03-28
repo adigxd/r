@@ -15,6 +15,12 @@ class __CAM__:
         self.spd = spd
         self.sen = sen
         self.rot = rot
+    
+    def _SPD_SET(self, spd):
+        self.spd = spd
+    
+    def _SEN_SET(self, sen):
+        self.sen = sen
 
     def _CAM_SET(self, key_arr, mos_rel, kin):
         # MOUSE LOOK

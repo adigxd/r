@@ -136,10 +136,6 @@ class __MAP__:
             for y in range(0, 100):
                 self._BLC_SET(x, y, -50, "STONE_BRICK")
 
-        for x in range(-25, 125):
-            for y in range(0, 75):
-                self._BLC_SET(x, y, 50, "STONE_BRICK")
-
         for x in range(-25, 225):
             for z in range(-50, 50):
                 self._BLC_SET(x, 0, z, "STONE_SOLID")
