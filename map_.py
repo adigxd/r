@@ -1,6 +1,7 @@
 import numpy as np
 from OpenGL.GL import *
 import os
+import json
 
 # ./
 import buf
@@ -13,13 +14,24 @@ load_dotenv()
 _SED               = int(os.getenv('SED'))
 _BLC_SIZ           = int(os.getenv('BLC_SIZ'))
 _TEX_SIZ           = int(os.getenv('TEX_SIZ'))
+_DIR_MAP           = os.getenv('DIR_MAP')
+_MAP               = os.getenv('MAP')
 
 # format: "BLK_TYP": {"top": (col, row), "sid": (col, row), "btm": (col, row)} or {"all": (col, row)} (if all faces of the block use the same texture)
 _BLC_TYP_ARR = {
     "STONE": {"all": (0, 0)},
     "STONE_SOLID": {"all": (1, 0)},
     "STONE_BRICK": {"all": (2, 0)},
-    "STONE_DEBUG": {"top": (2, 0), "sid": (0, 0), "btm": (0, 0)},
+    "STONE_LIGHT": {"all": (0, 1)},
+    "STONE_SOLID_LIGHT": {"all": (1, 1)},
+    "STONE_BRICK_LIGHT": {"all": (2, 1)},
+    "STONE_BOLD": {"all": (0, 2)},
+    "STONE_SOLID_BOLD": {"all": (1, 2)},
+    "STONE_BRICK_BOLD": {"all": (2, 2)},
+    "STONE_DARK": {"all": (0, 3)},
+    "STONE_SOLID_DARK": {"all": (1, 3)},
+    "STONE_BRICK_DARK": {"all": (2, 3)},
+    "STONE_DEBUG": {"top": (6, 0), "sid": (0, 0), "btm": (0, 0)},
 }
 
 class __MAP__:
@@ -58,7 +70,7 @@ class __MAP__:
     def _VTX_ARR_ADD(self, x, y, z, blc_typ):
         # generate vertex data for a block at (x, y, z) of type blc_typ
         if blc_typ not in _BLC_TYP_ARR:
-            dbg.__DBG(dbg._TAG_ERR, ["block type"], ['...'])
+            dbg._DBG(dbg._TAG_ERR, ["block type"], ['...'])
 
             return []
         
@@ -131,20 +143,83 @@ class __MAP__:
         self.vtx_cnt_blc = len(vtx_arr) // 8 # 8 floats per vertex (position, normal, texcoord)
         self.new = False # mark the map as clean since we've just updated the vertex data
     
-    def _DBG_MAP_SET(self):
-        for x in range(-25, 125):
-            for y in range(0, 100):
-                self._BLC_SET(x, y, -50, "STONE_BRICK")
+    def _MAP_VoxelFunction(self, x, y, z, blc_typ):
+        self._BLC_SET(x, y, z, blc_typ)
+    
+    def _MAP_CubeFunction(self, x_min, x_max, y_min, y_max, z_min, z_max, blc_typ):
+        for x in range(x_min, x_max):
+            for y in range(y_min, y_max):
+                for z in range(z_min, z_max):
+                    self._BLC_SET(x, y, z, blc_typ)
+    
+    def _MAP_SphereFunction(self, cx, cy, cz, r, blc_typ):
+        r_sq = r * r
 
-        for x in range(-25, 225):
-            for z in range(-50, 50):
-                self._BLC_SET(x, 0, z, "STONE_SOLID")
+        for x in range(int(cx - r), int(cx + r) + 1):
+            for y in range(int(cy - r), int(cy + r) + 1):
+                for z in range(int(cz - r), int(cz + r) + 1):
+                    dx = x - cx
+                    dy = y - cy
+                    dz = z - cz
+                    if dx * dx + dy * dy + dz * dz <= r_sq:
+                        self._BLC_SET(x, y, z, blc_typ)
 
-        for x in range(-25, 125):
-            for z in range(-50, 50):
-                self._BLC_SET(x, 100, z, "STONE_SOLID")
+    def _MAP_SET(self):
+        self.blc_arr = {}
+        self.new = True
+
+        if not _DIR_MAP or not _MAP:
+            dbg._DBG(dbg._TAG_ERR, ['Map Error'], ['DIR_MAP and MAP must be set'])
+            self._VTX_ARR_NEW()
+
+            return
+        
+        map_nam = _MAP if _MAP.lower().endswith('.json') else f'{_MAP}.json'
+        map_pth = os.path.join(_DIR_MAP, map_nam)
+
+        dbg._DBG(dbg._TAG_CFG, ['Map File'], [map_pth])
+
+        try:
+            with open(map_pth, 'r', encoding='utf-8') as f:
+                map_dat = json.load(f)
+        except FileNotFoundError:
+            dbg._DBG(dbg._TAG_ERR, ['Map Error', 'File Missing', 'Path'], ['...', map_pth])
+            self._VTX_ARR_NEW()
+
+            return
+        except json.JSONDecodeError as E:
+            dbg._DBG(dbg._TAG_ERR, ['Map Error', 'JSON Invalid', 'Path', 'Error'], ['...', map_pth, E])
+            self._VTX_ARR_NEW()
+
+            return
+        except Exception as E:
+            dbg._DBG(dbg._TAG_ERR, ['Map Error', 'Load Error', 'Path', 'Error'], ['...', map_pth, E])
+            self._VTX_ARR_NEW()
+
+            return
+
+        map_obj = map_dat.get('MAP', {})
+
+        for vxl in map_obj.get('VOXELS', []):
+            self._MAP_VoxelFunction(vxl['x'], vxl['y'], vxl['z'], vxl['type'])
+
+        for cub in map_obj.get('CUBES', []):
+            self._MAP_CubeFunction(
+                cub['x_min'], cub['x_max'],
+                cub['y_min'], cub['y_max'],
+                cub['z_min'], cub['z_max'],
+                cub['type']
+            )
+
+        for sfr in map_obj.get('SPHERES', []):
+            self._MAP_SphereFunction(
+                sfr['x'], sfr['y'], sfr['z'], sfr['r'], sfr['type']
+            )
 
         self._VTX_ARR_NEW()
+
+    def _DBG_MAP_SET(self):
+        self._MAP_SET()
     
     def _MAP_GET(self):
         if self.new:

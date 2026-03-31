@@ -6,7 +6,7 @@ _TAG_CFG = 0x200
 
 _TAG_THD = 0x300
 
-def __DBG(TAG_KEY: int, KEY_ARR: list[str], VAL_ARR: list):
+def _DBG(TAG_KEY: int, KEY_ARR: list[str], VAL_ARR: list):
     TAG_MAP = {
         0x000: "DBG",
         0x100: "ERR",

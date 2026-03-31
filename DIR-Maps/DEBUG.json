@@ -1,0 +1,20 @@
+{
+    "MAP_NAME": "DEBUG",
+    "MAP_DESCRIPTION": "Debug map.",
+    "MAP":
+    {
+        "VOXELS":
+        [
+            {"x": 15, "y": 15, "z": 15, "type": "STONE_LIGHT"}
+        ],
+        "CUBES":
+        [
+            {"x_min": -25, "y_min": -25, "z_min": -25, "x_max": 0, "y_max": 0, "z_max": 0, "type": "STONE_BRICK_BOLD"},
+            {"x_min": -30, "y_min": -30, "z_min": -30, "x_max": -25, "y_max": -25, "z_max": -25, "type": "STONE_BRICK_LIGHT"}
+        ],
+        "SPHERES":
+        [
+            {"x": 0, "y": 0, "z": 0, "r": 10, "type": "STONE_SOLID_DARK"}
+        ]
+    }
+}

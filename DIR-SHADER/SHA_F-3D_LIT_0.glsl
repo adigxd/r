@@ -79,15 +79,15 @@ void main()
 	if (NML_OUT.y > 0.5) {
 	    COL_SHD = 1.0;    // top
 	} else if (NML_OUT.y < -0.5) {
-	    COL_SHD = 0.7;    // bottom
+	    COL_SHD = 0.75;    // bottom
 	} else if (NML_OUT.z > 0.5) {
-	    COL_SHD = 0.9;    // front
+	    COL_SHD = 0.916;    // front
 	} else if (NML_OUT.z < -0.5) {
-	    COL_SHD = 0.9;    // back
+	    COL_SHD = 0.916;    // back
 	} else if (NML_OUT.x > 0.5) {
-	    COL_SHD = 0.8;    // right
+	    COL_SHD = 0.833;    // right
 	} else {
-	    COL_SHD = 0.8;    // left
+	    COL_SHD = 0.833;    // left
 	}
 	
 	

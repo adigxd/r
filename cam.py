@@ -10,17 +10,63 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class __CAM__:
-    def __init__(self, pos, spd, sen, rot=[0, 0]):
+    def __init__(self, pos, spd, sen, rot=[0, 0], map=None):
         self.pos = pos
         self.spd = spd
         self.sen = sen
         self.rot = rot
+        self.map = map
     
     def _SPD_SET(self, spd):
         self.spd = spd
     
     def _SEN_SET(self, sen):
         self.sen = sen
+    
+    def _MAP_SET(self, map):
+        self.map = map
+
+    def _POS_FIX(self):
+        if not self.map:
+            return
+
+        r = 0.5  # collision radius
+
+        px, py, pz = self.pos
+
+        min_x = int(math.floor(px - r))
+        max_x = int(math.ceil(px + r))
+        min_y = int(math.floor(py - r))
+        max_y = int(math.ceil(py + r))
+        min_z = int(math.floor(pz - r))
+        max_z = int(math.ceil(pz + r))
+
+        for bx in range(min_x, max_x + 1):
+            for by in range(min_y, max_y + 1):
+                for bz in range(min_z, max_z + 1):
+                    if (bx, by, bz) not in self.map.blc_arr:
+                        continue
+
+                    # find closest point on block AABB to camera
+                    cx = max(bx, min(self.pos[0], bx + 1))
+                    cy = max(by, min(self.pos[1], by + 1))
+                    cz = max(bz, min(self.pos[2], bz + 1))
+
+                    dx = self.pos[0] - cx
+                    dy = self.pos[1] - cy
+                    dz = self.pos[2] - cz
+
+                    dist = math.sqrt(dx*dx + dy*dy + dz*dz)
+
+                    if 0 < dist < r:
+                        # push camera out along the penetration normal
+                        scale = (r - dist) / dist
+                        self.pos[0] += dx * scale
+                        self.pos[1] += dy * scale
+                        self.pos[2] += dz * scale
+                    elif dist == 0:
+                        # dead center inside block, push up as fallback
+                        self.pos[1] += r
 
     def _CAM_SET(self, key_arr, mos_rel, kin):
         # MOUSE LOOK
@@ -75,6 +121,8 @@ class __CAM__:
             self.pos[1] += self.spd * spd_fix
         if key_arr[pygame.K_LSHIFT]: # FLY DOWN
             self.pos[1] -= self.spd * spd_fix
+        
+        self._POS_FIX()
     
     def _CAM_GET(self):
         return self.pos, self.rot

@@ -14,7 +14,7 @@ import buf
 from cam import __CAM__
 import dbg
 import mat
-from map_0 import __MAP__
+from map_ import __MAP__
 import sha
 import uni
 
@@ -68,7 +68,7 @@ _PTH_SSM_DIR       = os.getenv('PTH_SSM_DIR')
 # main.py / debug
 # ...
 
-dbg.__DBG(dbg._TAG_CFG, ['THD_CNT'], [_THD_CNT])
+dbg._DBG(dbg._TAG_CFG, ['THD_CNT'], [_THD_CNT])
 
 # ------
 
@@ -90,7 +90,7 @@ def _TEX_GET(pth):
 
         return tex, wid, hei
     except Exception as E:
-        dbg.__DBG(dbg._TAG_ERR, ['_TEX_GET', pth], ['...'])
+        dbg._DBG(dbg._TAG_ERR, ['_TEX_GET', pth], ['...'])
 
         return None, None, None
 
@@ -137,7 +137,7 @@ def main():
 
     # check framebuffer status
     if glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE:
-        dbg.__DBG(dbg._TAG_ERR, ['glCheckFramebufferStatus'], ['FRAMEBUFFER NOT COMPLETE'])
+        dbg._DBG(dbg._TAG_ERR, ['glCheckFramebufferStatus'], ['FRAMEBUFFER NOT COMPLETE'])
         pygame.quit()
         exit()
 
@@ -153,8 +153,14 @@ def main():
 
     # ------
 
+    # map setup
+    map = __MAP__()
+    map._DBG_MAP_SET() # set up a test map with some blocks for rendering; this will be replaced with dynamic chunk loading and generation based on the player's position in the world, but for now it serves as a simple test case to ensure that the rendering pipeline is working correctly with the block vertex data and texture coordinates from the atlas
+
+    # ------
+
     # camera and mouse setup
-    cam = __CAM__(list(_POS), _SPD, _SEN)
+    cam = __CAM__(list(_POS), _SPD, _SEN, map=map)
     pygame.mouse.set_visible(False)
     pygame.event.set_grab(True)
 
@@ -170,10 +176,12 @@ def main():
 
     # texture setup
     tex_id, tex_wid, tex_hei = _TEX_GET(_PTH_TEX)
-    dbg.__DBG(dbg._TAG_CFG, ['Texture Path', 'Texture ID', 'Width', 'Height'], [_PTH_TEX, tex_id, tex_wid, tex_hei])
+    dbg._DBG(dbg._TAG_CFG, ['Texture Path', 'Texture ID', 'Width', 'Height'], [_PTH_TEX, tex_id, tex_wid, tex_hei])
 
-    vao_blc = None # block vertex array object
-    vtx_cnt_blc = 0 # block vertex count for rendering; these will be generated dynamically based on the chunks that are loaded, and will be used to render the blocks in the scene with the appropriate texture coordinates from the atlas
+    # vao_blc = block vertex array object
+    # vtx_cnt_blc = block vertex count for rendering; these will be generated dynamically based on the chunks that are loaded, and will be used to render the blocks in the scene with the appropriate texture coordinates from the atlas
+
+    vao_blc, vtx_cnt_blc = map._MAP_GET() # get the vertex array object and vertex count for rendering the blocks in the scene; this will be updated dynamically based on the chunks that are loaded and the blocks they contain, allowing for efficient rendering of only the visible blocks with the appropriate texture coordinates from the atlas
 
     # ------
 
@@ -230,12 +238,6 @@ def main():
 
     # ------
 
-    # map setup
-    map = __MAP__()
-    map._DBG_MAP_SET() # set up a test map with some blocks for rendering; this will be replaced with dynamic chunk loading and generation based on the player's position in the world, but for now it serves as a simple test case to ensure that the rendering pipeline is working correctly with the block vertex data and texture coordinates from the atlas
-
-    # ------
-
     # frame rate is how many frames are rendered per second, 
     # while tick rate is how many times the game loop updates per second; 
     # you can have a high tick rate for smooth input and physics, 
@@ -284,7 +286,7 @@ def main():
 
                 pth_ssm = os.path.join(_PTH_SSM_DIR, f'{int(time.time())}.png') # create a unique file path for the screenshot using the current timestamp
                 pygame.image.save(sfc, pth_ssm) # save the surface as a PNG image to the specified file path
-                dbg.__DBG(dbg._TAG_DBG, ['Screenshot Mode'], ['...'])
+                dbg._DBG(dbg._TAG_DBG, ['Screenshot Mode'], ['...'])
 
             if E.type == pygame.KEYDOWN and E.key == pygame.K_RCTRL:
                 # wireframe toggle for debugging
@@ -313,9 +315,9 @@ def main():
             math.floor(cam.pos[2]) + 0.5
         ]
 
-        if cnt % 120 == 0:
-            dbg.__DBG(dbg._TAG_DBG, ['cam.pos'], [cam.pos])
-            dbg.__DBG(dbg._TAG_DBG, ['cam.rot'], [cam.rot])
+        if cnt % 256 == 0:
+            dbg._DBG(dbg._TAG_DBG, ['cam.pos'], [cam.pos])
+            dbg._DBG(dbg._TAG_DBG, ['cam.rot'], [cam.rot])
 
         # cam._CAM_RDR() # look
 
