@@ -5,7 +5,7 @@
 # CLI:
 
 ```
-echo .env # Optional
+cat .env # Optional
 pip install -r req.txt
 python main.py
 ```
