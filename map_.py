@@ -72,7 +72,7 @@ class __MAP__:
     
     def _VTX_ARR_ADD(self, x, y, z, blc_typ):
         # generate vertex data for a block at (x, y, z) of type blc_typ
-        if blc_typ not in _BLC_TYP_ARR:
+        if blc_typ == "AIR" or blc_typ not in _BLC_TYP_ARR:
             dbg._DBG(dbg._TAG_ERR, ["block type"], ['...'])
 
             return []
@@ -129,9 +129,17 @@ class __MAP__:
     def _VTX_ARR_NEW(self):
         # generate vertex data for the entire map
         vtx_arr = []
+        bad_keys = []
 
         for (x, y, z), blc_typ in self.blc_arr.items():
-            vtx_arr.extend(self._VTX_ARR_ADD(x, y, z, blc_typ))
+            result = self._VTX_ARR_ADD(x, y, z, blc_typ)
+            if result:
+                vtx_arr.extend(result)
+            else:
+                bad_keys.append((x, y, z))
+
+        for key in bad_keys:
+            del self.blc_arr[key]
 
         # don't try to draw if there's nothing to draw
         if not vtx_arr:
@@ -231,9 +239,15 @@ class __MAP__:
                         if dz >= 0 and dz * dz <= (1 - (dz / h)) * r_sq:
                             self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
 
+    def _MAP_TreeFunction(self, x, y, z, typ):
+        if typ == "PINE":
+            self._MAP_CylinderFunction(x, y, z, 0.5, 5, 0, ["STONE_BOLD"])
+            self._MAP_ConeFunction(x, y + 4, z, 2, 4, 0, 0, ["STONE_LIGHT"])
+
+
     def _MAP_SET(self):
         random.seed(self.sed)
-        
+
         self.blc_arr = {}
         self.new = True
 
@@ -284,16 +298,19 @@ class __MAP__:
             self._MAP_SphereFunction(
                 sfr['x'], sfr['y'], sfr['z'], sfr['r'], sfr['blc_typ_arr']
             )
-        
+
         for cyl in map_obj.get('CYLINDERS', []):
             self._MAP_CylinderFunction(
                 cyl['x'], cyl['y'], cyl['z'], cyl['r'], cyl['h'], cyl['axs'], cyl['blc_typ_arr']
             )
-        
+
         for con in map_obj.get('CONES', []):
             self._MAP_ConeFunction(
                 con['x'], con['y'], con['z'], con['r'], con['h'], con['axs'], con['flp'], con['blc_typ_arr']
             )
+
+        for tre in map_obj.get('TREES', []):
+            continue # TODO: IMPLEMENT
 
         self._VTX_ARR_NEW()
 

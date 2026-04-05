@@ -6,8 +6,15 @@
         "CUBES":
         [
             {"x_min": -256, "y_min": 0, "z_min": -256, "x_max": 256, "y_max": 1, "z_max": 256, "blc_typ_arr": [
-                "DIRT", "SAND"
+                "STONE_SOLID_BOLD", "STONE_BRICK_BOLD", "AIR"
             ]}
+        ],
+        "TREES":
+        [
+            {"x": 16, "y": 1, "z": 16, "h": 8, "typ": "PINE"},
+            {"x": -16, "y": 1, "z": -16, "h": 8, "typ": "OAK"},
+            {"x": 16, "y": 1, "z": -16, "h": 8, "typ": "BIRCH"},
+            {"x": -16, "y": 1, "z": 16, "h": 8, "typ": "SPRUCE"}
         ]
     }
 }
