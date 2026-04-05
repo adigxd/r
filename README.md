@@ -2,9 +2,9 @@
 
 ---
 
-# R
+# r
 
-## CLI:
+### CLI:
 
 ```
 cat .env # Optional
@@ -12,6 +12,6 @@ pip install -r req.txt
 python main.py
 ```
 
-## Atlas:
+### Atlas:
 
 ![](DIR-Resources/IMG-Texture.png)
