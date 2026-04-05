@@ -164,6 +164,70 @@ class __MAP__:
                     if dx * dx + dy * dy + dz * dz <= r_sq:
                         self._BLC_SET(x, y, z, blc_typ)
 
+    def _MAP_CylinderFunction(self, cx, cy, cz, r, h, axs, blc_typ):
+        # axs: 0 = vertical, 1 = horizontal along x, 2 = horizontal along z
+
+        r_sq = r * r
+
+        if axs == 0: # vertical
+            for x in range(int(cx - r), int(cx + r) + 1):
+                for y in range(int(cy), int(cy + h) + 1):
+                    for z in range(int(cz - r), int(cz + r) + 1):
+                        dx = x - cx
+                        dz = z - cz
+                        if dx * dx + dz * dz <= r_sq:
+                            self._BLC_SET(x, y, z, blc_typ)
+        elif axs == 1: # horizontal along x
+            for x in range(int(cx), int(cx + h) + 1):
+                for y in range(int(cy - r), int(cy + r) + 1):
+                    for z in range(int(cz - r), int(cz + r) + 1):
+                        dy = y - cy
+                        dz = z - cz
+                        if dy * dy + dz * dz <= r_sq:
+                            self._BLC_SET(x, y, z, blc_typ)
+        elif axs == 2: # horizontal along z
+            for x in range(int(cx - r), int(cx + r) + 1):
+                for y in range(int(cy - r), int(cy + r) + 1):
+                    for z in range(int(cz), int(cz + h) + 1):
+                        dx = x - cx
+                        dy = y - cy
+                        if dx * dx + dy * dy <= r_sq:
+                            self._BLC_SET(x, y, z, blc_typ)
+
+    def _MAP_ConeFunction(self, cx, cy, cz, r, h, axs, flp, blc_typ):
+        # axs: 0 = vertical, 1 = horizontal along x, 2 = horizontal along z
+        # flp: 0 or 1; whether the cone is flipped (pointing down/left/back instead of up/right/front)
+
+        r_sq = r * r
+
+        if axs == 0: # vertical
+            for x in range(int(cx - r), int(cx + r) + 1):
+                for y in range(int(cy), int(cy + h) + 1):
+                    for z in range(int(cz - r), int(cz + r) + 1):
+                        dy = y - cy
+                        if flp == 1:
+                            dy = -dy
+                        if dy >= 0 and dy * dy <= (1 - (dy / h)) * r_sq:
+                            self._BLC_SET(x, y, z, blc_typ)
+        elif axs == 1: # horizontal along x
+            for x in range(int(cx), int(cx + h) + 1):
+                for y in range(int(cy - r), int(cy + r) + 1):
+                    for z in range(int(cz - r), int(cz + r) + 1):
+                        dx = x - cx
+                        if flp == 1:
+                            dx = -dx
+                        if dx >= 0 and dx * dx <= (1 - (dx / h)) * r_sq:
+                            self._BLC_SET(x, y, z, blc_typ)
+        elif axs == 2: # horizontal along z
+            for x in range(int(cx - r), int(cx + r) + 1):
+                for y in range(int(cy - r), int(cy + r) + 1):
+                    for z in range(int(cz), int(cz + h) + 1):
+                        dz = z - cz
+                        if flp == 1:
+                            dz = -dz
+                        if dz >= 0 and dz * dz <= (1 - (dz / h)) * r_sq:
+                            self._BLC_SET(x, y, z, blc_typ)
+
     def _MAP_SET(self):
         self.blc_arr = {}
         self.new = True
@@ -214,6 +278,16 @@ class __MAP__:
         for sfr in map_obj.get('SPHERES', []):
             self._MAP_SphereFunction(
                 sfr['x'], sfr['y'], sfr['z'], sfr['r'], sfr['type']
+            )
+        
+        for cyl in map_obj.get('CYLINDERS', []):
+            self._MAP_CylinderFunction(
+                cyl['x'], cyl['y'], cyl['z'], cyl['r'], cyl['h'], cyl['axs'], cyl['type']
+            )
+        
+        for con in map_obj.get('CONES', []):
+            self._MAP_ConeFunction(
+                con['x'], con['y'], con['z'], con['r'], con['h'], con['axs'], con['flp'], con['type']
             )
 
         self._VTX_ARR_NEW()
