@@ -11,11 +11,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class __CAM__:
-    def __init__(self, kin, jmp_mag, acc_d, hit, pos, spd, sen, rot=[0, 0], map=None):
+    def __init__(self, kin, jmp_mag, acc_d, wid, hit, pos, spd, sen, rot=[0, 0], map=None):
         self.kin = kin
         self.jmp_mag = jmp_mag
         self.acc_d = acc_d
         self.pos = pos
+        self.wid = wid
         self.hit = hit
         self.spd = spd
         self.sen = sen
@@ -42,7 +43,7 @@ class __CAM__:
         if not self.map:
             return
 
-        r = 0.5 # collision half-extent (box is r * 2 wide)
+        r = self.wid / 2 # collision half-extent (box is r * 2 wide)
 
         px, py, pz = self.pos
 

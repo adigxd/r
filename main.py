@@ -45,6 +45,7 @@ _COL_BKG           = tuple(map(float, os.getenv('COL_BKG').split(',')))
 _POS               = tuple(map(float, os.getenv('POS').split(',')))
 _SPD               = float(os.getenv('SPD'))
 _SPD_MAG           = float(os.getenv('SPD_MAG'))
+_WID               = float(os.getenv('WID'))
 _HIT               = float(os.getenv('HIT'))
 _JMP_MAG           = float(os.getenv('JMP_MAG'))
 _ACC_D             = float(os.getenv('ACC_D'))
@@ -158,7 +159,7 @@ def main():
     # ------
 
     # camera and mouse setup
-    cam = __CAM__(_DBG_KIN, _JMP_MAG, _ACC_D, _HIT, list(_POS), _SPD, _SEN, map=map)
+    cam = __CAM__(_DBG_KIN, _JMP_MAG, _ACC_D, _WID, _HIT, list(_POS), _SPD, _SEN, map=map)
     pygame.mouse.set_visible(False)
     pygame.event.set_grab(True)
 

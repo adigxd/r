@@ -19,6 +19,8 @@ _DIR_MAP           = os.getenv('DIR_MAP')
 _MAP               = os.getenv('MAP')
 
 # format: "BLK_TYP": {"top": (col, row), "sid": (col, row), "btm": (col, row)} or {"all": (col, row)} (if all faces of the block use the same texture)
+# "AIR" is typically used in map files to represent empty space and is not included here since it doesn't correspond to an actual block type that needs vertex data
+#       it is treated the same way an invalid block type would be (ignored and not added to the vertex array)
 _BLC_TYP_ARR = {
     "STONE": {"all": (0, 0)},
     "STONE_SOLID": {"all": (1, 0)},
@@ -59,7 +61,7 @@ class __MAP__:
         # check if a block has any exposed faces (not surrounded)
         # for now, all blocks are visible (no occlusion culling)
 
-        return self.get_block(x, y, z) is not None
+        return self._BLC_GET(x, y, z) is not None
     
     def _TEX_LOC(self, col, row):
         # get texture coordinates for a block located at (col, row) in the texture atlas
@@ -72,9 +74,7 @@ class __MAP__:
     
     def _VTX_ARR_ADD(self, x, y, z, blc_typ):
         # generate vertex data for a block at (x, y, z) of type blc_typ
-        if blc_typ == "AIR" or blc_typ not in _BLC_TYP_ARR:
-            dbg._DBG(dbg._TAG_ERR, ["block type"], ['...'])
-
+        if blc_typ == 'AIR' or blc_typ not in _BLC_TYP_ARR:
             return []
         
         blc_map = _BLC_TYP_ARR[blc_typ]
@@ -129,16 +129,16 @@ class __MAP__:
     def _VTX_ARR_NEW(self):
         # generate vertex data for the entire map
         vtx_arr = []
-        bad_keys = []
+        vtx_del_arr = []
 
         for (x, y, z), blc_typ in self.blc_arr.items():
             result = self._VTX_ARR_ADD(x, y, z, blc_typ)
             if result:
                 vtx_arr.extend(result)
             else:
-                bad_keys.append((x, y, z))
+                vtx_del_arr.append((x, y, z))
 
-        for key in bad_keys:
+        for key in vtx_del_arr:
             del self.blc_arr[key]
 
         # don't try to draw if there's nothing to draw
