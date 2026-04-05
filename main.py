@@ -13,6 +13,7 @@ import time
 import buf
 from cam import __CAM__
 import dbg
+from kin import _ACC_D
 import mat
 from map_ import __MAP__
 import sha
@@ -30,12 +31,6 @@ _LIT_RAD           = float(os.getenv('LIT_RAD'))
 _LIT_INT           = float(os.getenv('LIT_INT'))
 _LIT_COL           = tuple(map(float, os.getenv('LIT_COL').split(',')))
 
-# shared
-_SIZ               = int(os.getenv('SIZ'))
-_POS               = tuple(map(float, os.getenv('POS').split(',')))
-_SPD               = float(os.getenv('SPD'))
-_SPD_MAG           = float(os.getenv('SPD_MAG'))
-
 # main.py
 _THD_CNT           = int(os.getenv('THD_CNT'))
 _RES_X             = int(os.getenv('RES_X'))
@@ -47,9 +42,12 @@ _SEE_MAX           = float(os.getenv('SEE_MAX'))
 _SEN               = float(os.getenv('SEN'))
 _LIN_WID           = float(os.getenv('LIN_WID'))
 _COL_BKG           = tuple(map(float, os.getenv('COL_BKG').split(',')))
-_COL_DEF           = tuple(map(float, os.getenv('COL_DEF').split(',')))
-_CHK_DIS           = int(os.getenv('CHK_DIS'))
-_CHK_CNT_MAX       = int(os.getenv('CHK_CNT_MAX'))
+_POS               = tuple(map(float, os.getenv('POS').split(',')))
+_SPD               = float(os.getenv('SPD'))
+_SPD_MAG           = float(os.getenv('SPD_MAG'))
+_HIT               = float(os.getenv('HIT'))
+_JMP_MAG           = float(os.getenv('JMP_MAG'))
+_ACC_D             = float(os.getenv('ACC_D'))
 
 # main.py / texture paths
 _PTH_TEX           = os.getenv('PTH_TEX')
@@ -66,7 +64,7 @@ _PTH_SHA_F_PST_1   = os.getenv('PTH_SHA_F_PST_1')
 _PTH_SSM_DIR       = os.getenv('PTH_SSM_DIR')
 
 # main.py / debug
-# ...
+_DBG_KIN=1               # debug kinematics mode (0: debug fly, 1: physics)
 
 dbg._DBG(dbg._TAG_CFG, ['THD_CNT'], [_THD_CNT])
 
@@ -160,7 +158,7 @@ def main():
     # ------
 
     # camera and mouse setup
-    cam = __CAM__(list(_POS), _SPD, _SEN, map=map)
+    cam = __CAM__(_DBG_KIN, _JMP_MAG, _ACC_D, _HIT, list(_POS), _SPD, _SEN, map=map)
     pygame.mouse.set_visible(False)
     pygame.event.set_grab(True)
 

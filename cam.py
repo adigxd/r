@@ -1,5 +1,6 @@
 import math
 from OpenGL.GL import *
+import os
 import pygame
 
 # ./
@@ -10,12 +11,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class __CAM__:
-    def __init__(self, pos, spd, sen, rot=[0, 0], map=None):
+    def __init__(self, kin, jmp_mag, acc_d, hit, pos, spd, sen, rot=[0, 0], map=None):
+        self.kin = kin
+        self.jmp_mag = jmp_mag
+        self.acc_d = acc_d
         self.pos = pos
+        self.hit = hit
         self.spd = spd
         self.sen = sen
         self.rot = rot
         self.map = map
+        self.vel_y = 0.0
+        self.grd = False
     
     def _SPD_SET(self, spd):
         self.spd = spd
@@ -26,17 +33,17 @@ class __CAM__:
     def _MAP_SET(self, map):
         self.map = map
 
-    def _POS_FIX(self):
+    def _POS_FIX(self, axs):
         if not self.map:
             return
 
-        r = 0.5  # collision radius
+        r = 0.5 # collision half-extent (box is r * 2 wide)
 
         px, py, pz = self.pos
 
         min_x = int(math.floor(px - r))
         max_x = int(math.ceil(px + r))
-        min_y = int(math.floor(py - r))
+        min_y = int(math.floor(py - self.hit)) # height
         max_y = int(math.ceil(py + r))
         min_z = int(math.floor(pz - r))
         max_z = int(math.ceil(pz + r))
@@ -47,26 +54,20 @@ class __CAM__:
                     if (bx, by, bz) not in self.map.blc_arr:
                         continue
 
-                    # find closest point on block AABB to camera
-                    cx = max(bx, min(self.pos[0], bx + 1))
-                    cy = max(by, min(self.pos[1], by + 1))
-                    cz = max(bz, min(self.pos[2], bz + 1))
+                    # "minimum of upper range minus the maximum of lower range" gives the amount of overlap
+                    ox = min(self.pos[0] + r, bx + 1) - max(self.pos[0] - r, bx)
+                    oy = min(self.pos[1] + r, by + 1) - max(self.pos[1] - self.hit, by)
+                    oz = min(self.pos[2] + r, bz + 1) - max(self.pos[2] - r, bz)
 
-                    dx = self.pos[0] - cx
-                    dy = self.pos[1] - cy
-                    dz = self.pos[2] - cz
+                    if ox <= 0 or oy <= 0 or oz <= 0:
+                        continue
 
-                    dist = math.sqrt(dx*dx + dy*dy + dz*dz)
-
-                    if 0 < dist < r:
-                        # push camera out along the penetration normal
-                        scale = (r - dist) / dist
-                        self.pos[0] += dx * scale
-                        self.pos[1] += dy * scale
-                        self.pos[2] += dz * scale
-                    elif dist == 0:
-                        # dead center inside block, push up as fallback
-                        self.pos[1] += r
+                    if axs == 0:
+                        self.pos[0] += ox if self.pos[0] > bx + 0.5 else -ox
+                    elif axs == 1:
+                        self.pos[1] += oy if self.pos[1] > by + 0.5 else -oy
+                    else:
+                        self.pos[2] += oz if self.pos[2] > bz + 0.5 else -oz
 
     def _CAM_SET(self, key_arr, mos_rel, kin):
         # MOUSE LOOK
@@ -99,31 +100,53 @@ class __CAM__:
            (key_arr[pygame.K_w] and key_arr[pygame.K_d]) or \
            (key_arr[pygame.K_s] and key_arr[pygame.K_a]) or \
            (key_arr[pygame.K_s] and key_arr[pygame.K_d]):
-            spd_fix = 0.7071
-        
+            spd_fix = 0.7071 # 1/sqrt(2) to maintain consistent speed when moving diagonally
+
+        mov = [0.0, 0.0, 0.0]
+
         if key_arr[pygame.K_w]: # FORWARD
-            self.pos[0] += fwd[0] * self.spd * spd_fix
-            self.pos[1] += fwd[1] * self.spd * spd_fix
-            self.pos[2] += fwd[2] * self.spd * spd_fix
+            mov[0] += fwd[0] * self.spd * spd_fix
+            mov[2] += fwd[2] * self.spd * spd_fix
         if key_arr[pygame.K_s]: # BACKWARD
-            self.pos[0] -= fwd[0] * self.spd * spd_fix
-            self.pos[1] -= fwd[1] * self.spd * spd_fix
-            self.pos[2] -= fwd[2] * self.spd * spd_fix
+            mov[0] -= fwd[0] * self.spd * spd_fix
+            mov[2] -= fwd[2] * self.spd * spd_fix
         if key_arr[pygame.K_a]: # LEFT
-            self.pos[0] -= rit[0] * self.spd * spd_fix
-            self.pos[1] -= rit[1] * self.spd * spd_fix
-            self.pos[2] -= rit[2] * self.spd * spd_fix
+            mov[0] -= rit[0] * self.spd * spd_fix
+            mov[2] -= rit[2] * self.spd * spd_fix
         if key_arr[pygame.K_d]: # RIGHT
-            self.pos[0] += rit[0] * self.spd * spd_fix
-            self.pos[1] += rit[1] * self.spd * spd_fix
-            self.pos[2] += rit[2] * self.spd * spd_fix
-        if key_arr[pygame.K_SPACE]: # FLY UP
-            self.pos[1] += self.spd * spd_fix
-        if key_arr[pygame.K_LSHIFT]: # FLY DOWN
-            self.pos[1] -= self.spd * spd_fix
-        
-        self._POS_FIX()
-    
+            mov[0] += rit[0] * self.spd * spd_fix
+            mov[2] += rit[2] * self.spd * spd_fix
+
+        if self.kin == 0: # DEBUG (FLY)
+            if key_arr[pygame.K_SPACE]: # FLY UP
+                mov[1] += self.spd * spd_fix
+            if key_arr[pygame.K_LSHIFT]: # FLY DOWN
+                mov[1] -= self.spd * spd_fix
+        elif self.kin == 1: # NORMAL
+            self.vel_y -= self.acc_d # gravity
+            if key_arr[pygame.K_SPACE] and self.grd: # JUMP
+                self.vel_y = self.jmp_mag
+            mov[1] += self.vel_y
+
+        self.pos[0] += mov[0]
+        self._POS_FIX(0)
+
+        self.pos[2] += mov[2]
+        self._POS_FIX(2)
+
+        self.pos[1] += mov[1]
+        pos_y_pre = self.pos[1]
+        self._POS_FIX(1)
+        if self.kin == 1:
+            if self.vel_y <= 0 and self.pos[1] > pos_y_pre: # floor hit
+                self.vel_y = 0.0
+                self.grd = True
+            elif self.vel_y > 0 and self.pos[1] < pos_y_pre: # ceiling hit
+                self.vel_y = 0.0
+                self.grd = False
+            else:
+                self.grd = False
+
     def _CAM_GET(self):
         return self.pos, self.rot
 

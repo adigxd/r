@@ -10,7 +10,8 @@
         "CUBES":
         [
             {"x_min": -25, "y_min": -25, "z_min": -25, "x_max": 0, "y_max": 0, "z_max": 0, "type": "STONE_BRICK_BOLD"},
-            {"x_min": -30, "y_min": -30, "z_min": -30, "x_max": -25, "y_max": -25, "z_max": -25, "type": "STONE_BRICK_LIGHT"}
+            {"x_min": -30, "y_min": -30, "z_min": -30, "x_max": -25, "y_max": -25, "z_max": -25, "type": "STONE_BRICK_LIGHT"},
+            {"x_min": -100, "y_min": -32, "z_min": -100, "x_max": 100, "y_max": -31, "z_max": 100, "type": "STONE_BRICK_DARK"}
         ],
         "SPHERES":
         [
