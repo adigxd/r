@@ -33,6 +33,11 @@ class __CAM__:
     def _MAP_SET(self, map):
         self.map = map
 
+    def _POS_SET(self, pos):
+        self.vel_y = 0.0
+        self.grd = False
+        self.pos = pos
+
     def _POS_FIX(self, axs):
         if not self.map:
             return

@@ -2,6 +2,7 @@ import numpy as np
 from OpenGL.GL import *
 import os
 import json
+import random
 
 # ./
 import buf
@@ -31,6 +32,8 @@ _BLC_TYP_ARR = {
     "STONE_DARK": {"all": (0, 3)},
     "STONE_SOLID_DARK": {"all": (1, 3)},
     "STONE_BRICK_DARK": {"all": (2, 3)},
+    "SAND": {"all": (0, 4)},
+    "DIRT": {"all": (1, 4)},
     "STONE_DEBUG": {"top": (6, 0), "sid": (0, 0), "btm": (0, 0)},
 }
 
@@ -143,16 +146,16 @@ class __MAP__:
         self.vtx_cnt_blc = len(vtx_arr) // 8 # 8 floats per vertex (position, normal, texcoord)
         self.new = False # mark the map as clean since we've just updated the vertex data
     
-    def _MAP_VoxelFunction(self, x, y, z, blc_typ):
-        self._BLC_SET(x, y, z, blc_typ)
+    def _MAP_VoxelFunction(self, x, y, z, blc_typ_arr):
+        self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
     
-    def _MAP_CubeFunction(self, x_min, x_max, y_min, y_max, z_min, z_max, blc_typ):
+    def _MAP_CubeFunction(self, x_min, x_max, y_min, y_max, z_min, z_max, blc_typ_arr):
         for x in range(x_min, x_max):
             for y in range(y_min, y_max):
                 for z in range(z_min, z_max):
-                    self._BLC_SET(x, y, z, blc_typ)
+                    self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
     
-    def _MAP_SphereFunction(self, cx, cy, cz, r, blc_typ):
+    def _MAP_SphereFunction(self, cx, cy, cz, r, blc_typ_arr):
         r_sq = r * r
 
         for x in range(int(cx - r), int(cx + r) + 1):
@@ -162,9 +165,9 @@ class __MAP__:
                     dy = y - cy
                     dz = z - cz
                     if dx * dx + dy * dy + dz * dz <= r_sq:
-                        self._BLC_SET(x, y, z, blc_typ)
+                        self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
 
-    def _MAP_CylinderFunction(self, cx, cy, cz, r, h, axs, blc_typ):
+    def _MAP_CylinderFunction(self, cx, cy, cz, r, h, axs, blc_typ_arr):
         # axs: 0 = vertical, 1 = horizontal along x, 2 = horizontal along z
 
         r_sq = r * r
@@ -176,7 +179,7 @@ class __MAP__:
                         dx = x - cx
                         dz = z - cz
                         if dx * dx + dz * dz <= r_sq:
-                            self._BLC_SET(x, y, z, blc_typ)
+                            self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
         elif axs == 1: # horizontal along x
             for x in range(int(cx), int(cx + h) + 1):
                 for y in range(int(cy - r), int(cy + r) + 1):
@@ -184,7 +187,7 @@ class __MAP__:
                         dy = y - cy
                         dz = z - cz
                         if dy * dy + dz * dz <= r_sq:
-                            self._BLC_SET(x, y, z, blc_typ)
+                            self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
         elif axs == 2: # horizontal along z
             for x in range(int(cx - r), int(cx + r) + 1):
                 for y in range(int(cy - r), int(cy + r) + 1):
@@ -192,9 +195,9 @@ class __MAP__:
                         dx = x - cx
                         dy = y - cy
                         if dx * dx + dy * dy <= r_sq:
-                            self._BLC_SET(x, y, z, blc_typ)
+                            self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
 
-    def _MAP_ConeFunction(self, cx, cy, cz, r, h, axs, flp, blc_typ):
+    def _MAP_ConeFunction(self, cx, cy, cz, r, h, axs, flp, blc_typ_arr):
         # axs: 0 = vertical, 1 = horizontal along x, 2 = horizontal along z
         # flp: 0 or 1; whether the cone is flipped (pointing down/left/back instead of up/right/front)
 
@@ -208,7 +211,7 @@ class __MAP__:
                         if flp == 1:
                             dy = -dy
                         if dy >= 0 and dy * dy <= (1 - (dy / h)) * r_sq:
-                            self._BLC_SET(x, y, z, blc_typ)
+                            self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
         elif axs == 1: # horizontal along x
             for x in range(int(cx), int(cx + h) + 1):
                 for y in range(int(cy - r), int(cy + r) + 1):
@@ -217,7 +220,7 @@ class __MAP__:
                         if flp == 1:
                             dx = -dx
                         if dx >= 0 and dx * dx <= (1 - (dx / h)) * r_sq:
-                            self._BLC_SET(x, y, z, blc_typ)
+                            self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
         elif axs == 2: # horizontal along z
             for x in range(int(cx - r), int(cx + r) + 1):
                 for y in range(int(cy - r), int(cy + r) + 1):
@@ -226,9 +229,11 @@ class __MAP__:
                         if flp == 1:
                             dz = -dz
                         if dz >= 0 and dz * dz <= (1 - (dz / h)) * r_sq:
-                            self._BLC_SET(x, y, z, blc_typ)
+                            self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
 
     def _MAP_SET(self):
+        random.seed(self.sed)
+        
         self.blc_arr = {}
         self.new = True
 
@@ -265,29 +270,29 @@ class __MAP__:
         map_obj = map_dat.get('MAP', {})
 
         for vxl in map_obj.get('VOXELS', []):
-            self._MAP_VoxelFunction(vxl['x'], vxl['y'], vxl['z'], vxl['type'])
+            self._MAP_VoxelFunction(vxl['x'], vxl['y'], vxl['z'], vxl['blc_typ_arr'])
 
         for cub in map_obj.get('CUBES', []):
             self._MAP_CubeFunction(
                 cub['x_min'], cub['x_max'],
                 cub['y_min'], cub['y_max'],
                 cub['z_min'], cub['z_max'],
-                cub['type']
+                cub['blc_typ_arr']
             )
 
         for sfr in map_obj.get('SPHERES', []):
             self._MAP_SphereFunction(
-                sfr['x'], sfr['y'], sfr['z'], sfr['r'], sfr['type']
+                sfr['x'], sfr['y'], sfr['z'], sfr['r'], sfr['blc_typ_arr']
             )
         
         for cyl in map_obj.get('CYLINDERS', []):
             self._MAP_CylinderFunction(
-                cyl['x'], cyl['y'], cyl['z'], cyl['r'], cyl['h'], cyl['axs'], cyl['type']
+                cyl['x'], cyl['y'], cyl['z'], cyl['r'], cyl['h'], cyl['axs'], cyl['blc_typ_arr']
             )
         
         for con in map_obj.get('CONES', []):
             self._MAP_ConeFunction(
-                con['x'], con['y'], con['z'], con['r'], con['h'], con['axs'], con['flp'], con['type']
+                con['x'], con['y'], con['z'], con['r'], con['h'], con['axs'], con['flp'], con['blc_typ_arr']
             )
 
         self._VTX_ARR_NEW()

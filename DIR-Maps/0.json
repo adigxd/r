@@ -1,0 +1,13 @@
+{
+    "MAP_NAME": "0",
+    "MAP_DESCRIPTION": "0",
+    "MAP":
+    {
+        "CUBES":
+        [
+            {"x_min": -256, "y_min": 0, "z_min": -256, "x_max": 256, "y_max": 1, "z_max": 256, "blc_typ_arr": [
+                "DIRT", "SAND"
+            ]}
+        ]
+    }
+}

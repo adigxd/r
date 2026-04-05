@@ -298,6 +298,9 @@ def main():
                 if E.button == 3:
                     cam._SPD_SET(_SPD)
 
+            if E.type == pygame.KEYDOWN and E.key == pygame.K_BACKSPACE:
+                cam._POS_SET(list(_POS))
+
         mos_rel = pygame.mouse.get_rel() # get the relative movement of the mouse since the last call to this function
         key_arr = pygame.key.get_pressed() # get the current state of all keyboard buttons
 
