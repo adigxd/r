@@ -18,7 +18,7 @@ _TEX_SIZ           = int(os.getenv('TEX_SIZ'))
 _DIR_MAP           = os.getenv('DIR_MAP')
 _MAP               = os.getenv('MAP')
 
-# format: "BLK_TYP": {"top": (col, row), "sid": (col, row), "btm": (col, row)} or {"all": (col, row)} (if all faces of the block use the same texture)
+# format: "BLK_TYP": {"top": (col, row), "sid": (col, row), "bot": (col, row)} or {"all": (col, row)} (if all faces of the block use the same texture)
 # "AIR" is typically used in map files to represent empty space and is not included here since it doesn't correspond to an actual block type that needs vertex data
 #       it is treated the same way an invalid block type would be (ignored and not added to the vertex array)
 _BLC_TYP_ARR = {
@@ -34,9 +34,26 @@ _BLC_TYP_ARR = {
     "STONE_DARK": {"all": (0, 3)},
     "STONE_SOLID_DARK": {"all": (1, 3)},
     "STONE_BRICK_DARK": {"all": (2, 3)},
-    "SAND": {"all": (0, 4)},
-    "DIRT": {"all": (1, 4)},
-    "STONE_DEBUG": {"top": (6, 0), "sid": (0, 0), "btm": (0, 0)},
+    "SAND": {"all": [(15, 15), (14, 15), (13, 15), (12, 15)]},
+    "DIRT": {"all": [(15, 14), (14, 14), (13, 14), (12, 14)]},
+    "GRASS": {"all": [(15, 13), (14, 13), (13, 13), (12, 13)]},
+    "LOG_MAPLE": {"top": (0, 6), "sid": (0, 5), "bot": (0, 6)},
+    "LOG_MAPLE_FULL": {"all": (0, 5)},
+    "LOG_MAPLE_NAKED": {"all": (0, 8)},
+    "LOG_PINE": {"top": (1, 6), "sid": (1, 5), "bot": (1, 6)},
+    "LOG_PINE_FULL": {"all": (1, 5)},
+    "LOG_PINE_NAKED": {"all": (1, 8)},
+    "LOG_WINDSWEPT": {"top": (2, 6), "sid": (2, 5), "bot": (2, 6)},
+    "LOG_WINDSWEPT_FULL": {"all": (2, 5)},
+    "LOG_WINDSWEPT_NAKED": {"all": (2, 8)},
+    "LOG_REDWOOD": {"top": (3, 6), "sid": (3, 5), "bot": (3, 6)},
+    "LOG_REDWOOD_FULL": {"all": (3, 5)},
+    "LOG_REDWOOD_NAKED": {"all": (3, 8)},
+    "LEAF_MAPLE": {"all": (0, 7)},
+    "LEAF_PINE": {"all": (1, 7)},
+    "LEAF_WINDSWEPT": {"all": (2, 7)},
+    "LEAF_REDWOOD": {"all": (3, 7)},
+    "STONE_DEBUG": {"top": (6, 0), "sid": (0, 0), "bot": (0, 0)},
 }
 
 class __MAP__:
@@ -63,6 +80,12 @@ class __MAP__:
 
         return self._BLC_GET(x, y, z) is not None
     
+    def _TEX_RND(self, loc):
+        # val can be a single (col, row) tuple or a list of tuples for random selection
+        if isinstance(loc, list):
+            return self._TEX_LOC(*random.choice(loc))
+        return self._TEX_LOC(*loc)
+
     def _TEX_LOC(self, col, row):
         # get texture coordinates for a block located at (col, row) in the texture atlas
         u0 = (col * _BLC_SIZ) / _TEX_SIZ
@@ -84,7 +107,7 @@ class __MAP__:
             "LFT": blc_map.get("all", blc_map.get("sid")),
             "RGT": blc_map.get("all", blc_map.get("sid")),
             "TOP": blc_map.get("all", blc_map.get("top")),
-            "BTM": blc_map.get("all", blc_map.get("btm"))
+            "bot": blc_map.get("all", blc_map.get("bot"))
         }
 
         vtx_arr = []
@@ -94,21 +117,21 @@ class __MAP__:
         blc_pos_lft = [(x, y, z), (x, y, z + 1), (x, y + 1, z + 1), (x, y + 1, z)]
         blc_pos_rgt = [(x + 1, y, z + 1), (x + 1, y, z), (x + 1, y + 1, z), (x + 1, y + 1, z + 1)]
         blc_pos_top = [(x, y + 1, z + 1), (x + 1, y + 1, z + 1), (x + 1, y + 1, z), (x, y + 1, z)]
-        blc_pos_btm = [(x, y, z), (x + 1, y, z), (x + 1, y, z + 1), (x, y, z + 1)]
+        blc_pos_bot = [(x, y, z), (x + 1, y, z), (x + 1, y, z + 1), (x, y, z + 1)]
 
-        blc_tex_loc_fnt = self._TEX_LOC(*blc["FNT"])
-        blc_tex_loc_bac = self._TEX_LOC(*blc["BAC"])
-        blc_tex_loc_lft = self._TEX_LOC(*blc["LFT"])
-        blc_tex_loc_rgt = self._TEX_LOC(*blc["RGT"])
-        blc_tex_loc_top = self._TEX_LOC(*blc["TOP"])
-        blc_tex_loc_btm = self._TEX_LOC(*blc["BTM"])
+        blc_tex_loc_fnt = self._TEX_RND(blc["FNT"])
+        blc_tex_loc_bac = self._TEX_RND(blc["BAC"])
+        blc_tex_loc_lft = self._TEX_RND(blc["LFT"])
+        blc_tex_loc_rgt = self._TEX_RND(blc["RGT"])
+        blc_tex_loc_top = self._TEX_RND(blc["TOP"])
+        blc_tex_loc_bot = self._TEX_RND(blc["bot"])
 
         blc_fnt_nml = (0, 0, 1)
         blc_bac_nml = (0, 0, -1)
         blc_lft_nml = (-1, 0, 0)
         blc_rgt_nml = (1, 0, 0)
         blc_top_nml = (0, 1, 0)
-        blc_btm_nml = (0, -1, 0)
+        blc_bot_nml = (0, -1, 0)
 
         def add_fac(pos, tex_loc, nml):
             # add a face to the vertex array (two triangles)
@@ -122,7 +145,7 @@ class __MAP__:
         add_fac(blc_pos_lft, blc_tex_loc_lft, blc_lft_nml)
         add_fac(blc_pos_rgt, blc_tex_loc_rgt, blc_rgt_nml)
         add_fac(blc_pos_top, blc_tex_loc_top, blc_top_nml)
-        add_fac(blc_pos_btm, blc_tex_loc_btm, blc_btm_nml)
+        add_fac(blc_pos_bot, blc_tex_loc_bot, blc_bot_nml)
         
         return vtx_arr
     
@@ -154,17 +177,28 @@ class __MAP__:
         self.vtx_cnt_blc = len(vtx_arr) // 8 # 8 floats per vertex (position, normal, texcoord)
         self.new = False # mark the map as clean since we've just updated the vertex data
     
+    def _BLC_TYP_RND(self, blc_typ_arr):
+        # blc_typ_arr can be a list (equal chance) or a dict {"TYPE": weight} for weighted selection
+        if isinstance(blc_typ_arr, dict):
+            return random.choices(list(blc_typ_arr.keys()), weights=list(blc_typ_arr.values()), k=1)[0]
+
+        return random.choice(blc_typ_arr)
+
     def _MAP_VoxelFunction(self, x, y, z, blc_typ_arr):
-        self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
+        self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
     
     def _MAP_CubeFunction(self, x_min, x_max, y_min, y_max, z_min, z_max, blc_typ_arr):
         for x in range(x_min, x_max):
             for y in range(y_min, y_max):
                 for z in range(z_min, z_max):
-                    self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
+                    self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
     
+    def _MAP_CubeFunctionSimple(self, cx, cy, cz, r, blc_typ_arr):
+        r_haf = r // 2
+        self._MAP_CubeFunction(cx - r_haf, cx + r_haf, cy - r_haf, cy + r_haf, cz - r_haf, cz + r_haf, blc_typ_arr)
+
     def _MAP_SphereFunction(self, cx, cy, cz, r, blc_typ_arr):
-        r_sq = r * r
+        r_sqr = r * r
 
         for x in range(int(cx - r), int(cx + r) + 1):
             for y in range(int(cy - r), int(cy + r) + 1):
@@ -172,13 +206,13 @@ class __MAP__:
                     dx = x - cx
                     dy = y - cy
                     dz = z - cz
-                    if dx * dx + dy * dy + dz * dz <= r_sq:
-                        self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
+                    if dx * dx + dy * dy + dz * dz <= r_sqr:
+                        self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
 
     def _MAP_CylinderFunction(self, cx, cy, cz, r, h, axs, blc_typ_arr):
         # axs: 0 = vertical, 1 = horizontal along x, 2 = horizontal along z
 
-        r_sq = r * r
+        r_sqr = r * r
 
         if axs == 0: # vertical
             for x in range(int(cx - r), int(cx + r) + 1):
@@ -186,63 +220,94 @@ class __MAP__:
                     for z in range(int(cz - r), int(cz + r) + 1):
                         dx = x - cx
                         dz = z - cz
-                        if dx * dx + dz * dz <= r_sq:
-                            self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
+                        if dx * dx + dz * dz <= r_sqr:
+                            self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
         elif axs == 1: # horizontal along x
             for x in range(int(cx), int(cx + h) + 1):
                 for y in range(int(cy - r), int(cy + r) + 1):
                     for z in range(int(cz - r), int(cz + r) + 1):
                         dy = y - cy
                         dz = z - cz
-                        if dy * dy + dz * dz <= r_sq:
-                            self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
+                        if dy * dy + dz * dz <= r_sqr:
+                            self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
         elif axs == 2: # horizontal along z
             for x in range(int(cx - r), int(cx + r) + 1):
                 for y in range(int(cy - r), int(cy + r) + 1):
                     for z in range(int(cz), int(cz + h) + 1):
                         dx = x - cx
                         dy = y - cy
-                        if dx * dx + dy * dy <= r_sq:
-                            self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
+                        if dx * dx + dy * dy <= r_sqr:
+                            self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
 
     def _MAP_ConeFunction(self, cx, cy, cz, r, h, axs, flp, blc_typ_arr):
         # axs: 0 = vertical, 1 = horizontal along x, 2 = horizontal along z
         # flp: 0 or 1; whether the cone is flipped (pointing down/left/back instead of up/right/front)
 
-        r_sq = r * r
+        r_sqr = r * r
 
         if axs == 0: # vertical
             for x in range(int(cx - r), int(cx + r) + 1):
                 for y in range(int(cy), int(cy + h) + 1):
                     for z in range(int(cz - r), int(cz + r) + 1):
                         dy = y - cy
-                        if flp == 1:
-                            dy = -dy
-                        if dy >= 0 and dy * dy <= (1 - (dy / h)) * r_sq:
-                            self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
+                        dx = x - cx
+                        dz = z - cz
+                        t = (dy / h) if flp == 1 else 1.0 - (dy / h)
+                        if dy >= 0 and dx * dx + dz * dz <= r_sqr * t * t:
+                            self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
         elif axs == 1: # horizontal along x
             for x in range(int(cx), int(cx + h) + 1):
                 for y in range(int(cy - r), int(cy + r) + 1):
                     for z in range(int(cz - r), int(cz + r) + 1):
                         dx = x - cx
-                        if flp == 1:
-                            dx = -dx
-                        if dx >= 0 and dx * dx <= (1 - (dx / h)) * r_sq:
-                            self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
+                        dy = y - cy
+                        dz = z - cz
+                        t = (dx / h) if flp == 1 else 1.0 - (dx / h)
+                        if dx >= 0 and dy * dy + dz * dz <= r_sqr * t * t:
+                            self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
         elif axs == 2: # horizontal along z
             for x in range(int(cx - r), int(cx + r) + 1):
                 for y in range(int(cy - r), int(cy + r) + 1):
                     for z in range(int(cz), int(cz + h) + 1):
                         dz = z - cz
-                        if flp == 1:
-                            dz = -dz
-                        if dz >= 0 and dz * dz <= (1 - (dz / h)) * r_sq:
-                            self._BLC_SET(x, y, z, random.choice(blc_typ_arr))
+                        dx = x - cx
+                        dy = y - cy
+                        t = (dz / h) if flp == 1 else 1.0 - (dz / h)
+                        if dz >= 0 and dx * dx + dy * dy <= r_sqr * t * t:
+                            self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
 
-    def _MAP_TreeFunction(self, x, y, z, typ):
+    def _MAP_TreeFunction(self, x, y, z, h_pre, typ):
+        if typ == "MAPLE":
+            h = max(6, h_pre) # minimum maple height of 6
+            w = 0.5
+
+            self._MAP_CubeFunctionSimple(x, y + h, z, (h * 3) // 4, {"LEAF_MAPLE": 1, "AIR": 4})
+            self._MAP_SphereFunction(x, y + h, z, h // 2, {"LEAF_MAPLE": 1, "AIR": 1})
+            self._MAP_CylinderFunction(x, y, z, w, h, 0, ["LOG_MAPLE"])
         if typ == "PINE":
-            self._MAP_CylinderFunction(x, y, z, 0.5, 5, 0, ["STONE_BOLD"])
-            self._MAP_ConeFunction(x, y + 4, z, 2, 4, 0, 0, ["STONE_LIGHT"])
+            h = max(16, h_pre) # minimum pine height of 16
+            w = 0.5
+
+            self._MAP_ConeFunction(x, y + h // 4, z, h // 4, h // 8, 0, 1, {"LEAF_PINE": 1, "AIR": 3})
+            self._MAP_ConeFunction(x, y + ((h * 7) // 8), z, h // 8, h // 3, 0, 0, {"LEAF_PINE": 1, "AIR": 1})
+            self._MAP_ConeFunction(x, y + ((h * 3) // 4), z, h // 7, h // 3, 0, 0, {"LEAF_PINE": 1, "AIR": 1})
+            self._MAP_ConeFunction(x, y + ((h * 5) // 8), z, h // 6, h // 3, 0, 0, {"LEAF_PINE": 1, "AIR": 2})
+            self._MAP_ConeFunction(x, y + (h // 2), z, h // 5, h // 3, 0, 0, {"LEAF_PINE": 1, "AIR": 2})
+            self._MAP_ConeFunction(x, y + ((h * 3) // 8), z, h // 4, h // 3, 0, 0, {"LEAF_PINE": 1, "AIR": 3})
+            self._MAP_CylinderFunction(x, y, z, w, h, 0, ["LOG_PINE"])
+        if typ == "REDWOOD":
+            h = max(32, h_pre) # minimum redwood height of 32
+            w = max(1, (h // 32))
+
+            self._MAP_ConeFunction(x, y + h // 4, z, h // 4, h // 8, 0, 1, {"LEAF_REDWOOD": 1, "AIR": 3})
+            self._MAP_ConeFunction(x, y + ((h * 7) // 8), z, h // 8, h // 3, 0, 0, {"LEAF_REDWOOD": 1, "AIR": 1})
+            self._MAP_ConeFunction(x, y + ((h * 3) // 4), z, h // 7, h // 3, 0, 0, {"LEAF_REDWOOD": 1, "AIR": 1})
+            self._MAP_ConeFunction(x, y + ((h * 5) // 8), z, h // 6, h // 3, 0, 0, {"LEAF_REDWOOD": 1, "AIR": 2})
+            self._MAP_ConeFunction(x, y + (h // 2), z, h // 5, h // 3, 0, 0, {"LEAF_REDWOOD": 1, "AIR": 2})
+            self._MAP_ConeFunction(x, y + ((h * 3) // 8), z, h // 4, h // 3, 0, 0, {"LEAF_REDWOOD": 1, "AIR": 3})
+            self._MAP_CylinderFunction(x, y, z, w, h, 0, ["LOG_REDWOOD"])
+        else:
+            pass
 
 
     def _MAP_SET(self):
@@ -310,7 +375,9 @@ class __MAP__:
             )
 
         for tre in map_obj.get('TREES', []):
-            continue # TODO: IMPLEMENT
+            self._MAP_TreeFunction(
+                tre['x'], tre['y'], tre['z'], tre['h'], tre['typ']
+            )
 
         self._VTX_ARR_NEW()
 

@@ -6,15 +6,18 @@
         "CUBES":
         [
             {"x_min": -256, "y_min": 0, "z_min": -256, "x_max": 256, "y_max": 1, "z_max": 256, "blc_typ_arr": [
-                "STONE_SOLID_BOLD", "STONE_BRICK_BOLD", "AIR"
+                "DIRT"
             ]}
         ],
         "TREES":
         [
-            {"x": 16, "y": 1, "z": 16, "h": 8, "typ": "PINE"},
-            {"x": -16, "y": 1, "z": -16, "h": 8, "typ": "OAK"},
-            {"x": 16, "y": 1, "z": -16, "h": 8, "typ": "BIRCH"},
-            {"x": -16, "y": 1, "z": 16, "h": 8, "typ": "SPRUCE"}
+            {"x": 16, "y": 1, "z": 16, "h": 6, "typ": "MAPLE"},
+            {"x": 32, "y": 1, "z": 16, "h": 24, "typ": "MAPLE"},
+            {"x": -16, "y": 1, "z": -16, "h": 8, "typ": "PINE"},
+            {"x": -32, "y": 1, "z": -16, "h": 24, "typ": "PINE"},
+            {"x": -16, "y": 1, "z": 16, "h": 16, "typ": "REDWOOD"},
+            {"x": -32, "y": 1, "z": 16, "h": 40, "typ": "REDWOOD"},
+            {"x": -48, "y": 1, "z": 16, "h": 80, "typ": "REDWOOD"}
         ]
     }
 }

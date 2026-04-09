@@ -26,46 +26,49 @@ load_dotenv()
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1' # hide pygame support prompt
 
 # light
-_LIT_POS           = tuple(map(float, os.getenv('LIT_POS').split(',')))
-_LIT_RAD           = float(os.getenv('LIT_RAD'))
-_LIT_INT           = float(os.getenv('LIT_INT'))
-_LIT_COL           = tuple(map(float, os.getenv('LIT_COL').split(',')))
+_LIT_POS = tuple(map(float, os.getenv('LIT_POS').split(',')))
+_LIT_RAD = float(os.getenv('LIT_RAD'))
+_LIT_INT = float(os.getenv('LIT_INT'))
+_LIT_COL = tuple(map(float, os.getenv('LIT_COL').split(',')))
+
+dbg._DBG(dbg._TAG_CFG, ["Light Position", "      Radius", "      Intensity", "      Color"], [_LIT_POS, _LIT_RAD, _LIT_INT, _LIT_COL])
+
 
 # main.py
-_THD_CNT           = int(os.getenv('THD_CNT'))
-_RES_X             = int(os.getenv('RES_X'))
-_RES_Y             = int(os.getenv('RES_Y'))
-_TIC               = int(os.getenv('TIC'))
-_FOV               = float(os.getenv('FOV'))
-_SEE_MIN           = float(os.getenv('SEE_MIN'))
-_SEE_MAX           = float(os.getenv('SEE_MAX'))
-_SEN               = float(os.getenv('SEN'))
-_LIN_WID           = float(os.getenv('LIN_WID'))
-_COL_BKG           = tuple(map(float, os.getenv('COL_BKG').split(',')))
-_POS               = tuple(map(float, os.getenv('POS').split(',')))
-_SPD               = float(os.getenv('SPD'))
-_SPD_MAG           = float(os.getenv('SPD_MAG'))
-_WID               = float(os.getenv('WID'))
-_HIT               = float(os.getenv('HIT'))
-_JMP_MAG           = float(os.getenv('JMP_MAG'))
-_ACC_D             = float(os.getenv('ACC_D'))
+_THD_CNT = int(os.getenv('THD_CNT'))
+_RES_X = int(os.getenv('RES_X'))
+_RES_Y = int(os.getenv('RES_Y'))
+_TIC = int(os.getenv('TIC'))
+_FOV = float(os.getenv('FOV'))
+_SEE_MIN = float(os.getenv('SEE_MIN'))
+_SEE_MAX = float(os.getenv('SEE_MAX'))
+_SEN = float(os.getenv('SEN'))
+_LIN_WID = float(os.getenv('LIN_WID'))
+_COL_BKG = tuple(map(float, os.getenv('COL_BKG').split(',')))
+_POS = tuple(map(float, os.getenv('POS').split(',')))
+_SPD = float(os.getenv('SPD'))
+_SPD_MAG = float(os.getenv('SPD_MAG'))
+_WID = float(os.getenv('WID'))
+_HIT = float(os.getenv('HIT'))
+_JMP_MAG = float(os.getenv('JMP_MAG'))
+_ACC_D = float(os.getenv('ACC_D'))
 
 # main.py / texture paths
-_PTH_TEX           = os.getenv('PTH_TEX')
+_PTH_TEX = os.getenv('PTH_TEX')
 
 # main.py / shader paths
-_PTH_SHA_V         = os.getenv('PTH_SHA_V')
-_PTH_SHA_F         = os.getenv('PTH_SHA_F')
-_PTH_SHA_V_PST     = os.getenv('PTH_SHA_V_PST')
+_PTH_SHA_V = os.getenv('PTH_SHA_V')
+_PTH_SHA_F = os.getenv('PTH_SHA_F')
+_PTH_SHA_V_PST = os.getenv('PTH_SHA_V_PST')
 _PTH_SHA_F_PST_DEF = os.getenv('PTH_SHA_F_PST_DEF')
-_PTH_SHA_F_PST_0   = os.getenv('PTH_SHA_F_PST_0')
-_PTH_SHA_F_PST_1   = os.getenv('PTH_SHA_F_PST_1')
+_PTH_SHA_F_PST_0 = os.getenv('PTH_SHA_F_PST_0')
+_PTH_SHA_F_PST_1 = os.getenv('PTH_SHA_F_PST_1')
 
 # main.py / general paths
-_PTH_SSM_DIR       = os.getenv('PTH_SSM_DIR')
+_DIR_SSM = os.getenv('DIR_SSM')
 
 # main.py / debug
-_DBG_KIN=1               # debug kinematics mode (0: debug fly, 1: physics)
+_DBG_KIN = int(os.getenv('DBG_KIN'))
 
 dbg._DBG(dbg._TAG_CFG, ['THD_CNT'], [_THD_CNT])
 
@@ -283,7 +286,7 @@ def main():
                 sfc = pygame.image.frombuffer(pxl_dat, res, 'RGBA') # create a pygame surface from the pixel data (surface is a 2D image that can be drawn on the screen)
                 sfc = pygame.transform.flip(sfc, False, True) # flip the surface vertically (OpenGL's origin is bottom-left, while Pygame's is top-left)
 
-                pth_ssm = os.path.join(_PTH_SSM_DIR, f'{int(time.time())}.png') # create a unique file path for the screenshot using the current timestamp
+                pth_ssm = os.path.join(_DIR_SSM, f'{int(time.time())}.png') # create a unique file path for the screenshot using the current timestamp
                 pygame.image.save(sfc, pth_ssm) # save the surface as a PNG image to the specified file path
                 dbg._DBG(dbg._TAG_DBG, ['Screenshot Mode'], ['...'])
 
