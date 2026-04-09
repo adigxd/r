@@ -6,7 +6,7 @@
 
 ### What?
 
-The best voxel game engine ever
+The best voxel engine ever ...
 
 ### CLI:
 
