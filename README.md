@@ -18,8 +18,7 @@ python main.py
 
 ### Customization:
 
-- Create your own maps in `DIR-Maps`
-- Set your map in `.env` (`_MAP`)
+- Create your own maps in `DIR-Maps` ... set your map in `.env` (`_MAP`)
 - Play around with other variables in `.env`
 - Edit the textures in `DIR-Resources/IMG-Texture.png`
 
