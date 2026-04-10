@@ -21,7 +21,7 @@ python main.py
 ### Customization:
 
 - Create your own map in `DIR-Maps` ... set your map in `.env` (`_MAP`)
-- Play around with other variables in `.env`
+- Edit other variables in `.env`
 - Edit the textures in `DIR-Resources/IMG-Texture.png`
 
 ### Atlas:
