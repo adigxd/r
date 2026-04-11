@@ -13,8 +13,8 @@ The best voxel engine ever ...
 ### CLI:
 
 ```
-cat .env # Optional
 pip install -r req.txt
+cp .env.pre .env
 python main.py
 ```
 
