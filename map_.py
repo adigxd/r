@@ -200,13 +200,13 @@ class __MAP__:
     def _MAP_SphereFunction(self, cx, cy, cz, r, blc_typ_arr):
         r_sqr = r * r
 
-        for x in range(int(cx - r), int(cx + r) + 1):
-            for y in range(int(cy - r), int(cy + r) + 1):
-                for z in range(int(cz - r), int(cz + r) + 1):
+        for x in range(int(cx - r), int(cx + r)):
+            for y in range(int(cy - r), int(cy + r)):
+                for z in range(int(cz - r), int(cz + r)):
                     dx = x - cx
                     dy = y - cy
                     dz = z - cz
-                    if dx * dx + dy * dy + dz * dz <= r_sqr:
+                    if dx * dx + dy * dy + dz * dz < r_sqr:
                         self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
 
     def _MAP_CylinderFunction(self, cx, cy, cz, r, h, axs, blc_typ_arr):
@@ -215,28 +215,28 @@ class __MAP__:
         r_sqr = r * r
 
         if axs == 0: # vertical
-            for x in range(int(cx - r), int(cx + r) + 1):
-                for y in range(int(cy), int(cy + h) + 1):
-                    for z in range(int(cz - r), int(cz + r) + 1):
+            for x in range(int(cx - r), int(cx + r)):
+                for y in range(int(cy), int(cy + h)):
+                    for z in range(int(cz - r), int(cz + r)):
                         dx = x - cx
                         dz = z - cz
-                        if dx * dx + dz * dz <= r_sqr:
+                        if dx * dx + dz * dz < r_sqr:
                             self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
         elif axs == 1: # horizontal along x
-            for x in range(int(cx), int(cx + h) + 1):
-                for y in range(int(cy - r), int(cy + r) + 1):
-                    for z in range(int(cz - r), int(cz + r) + 1):
+            for x in range(int(cx), int(cx + h)):
+                for y in range(int(cy - r), int(cy + r)):
+                    for z in range(int(cz - r), int(cz + r)):
                         dy = y - cy
                         dz = z - cz
-                        if dy * dy + dz * dz <= r_sqr:
+                        if dy * dy + dz * dz < r_sqr:
                             self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
         elif axs == 2: # horizontal along z
-            for x in range(int(cx - r), int(cx + r) + 1):
-                for y in range(int(cy - r), int(cy + r) + 1):
-                    for z in range(int(cz), int(cz + h) + 1):
+            for x in range(int(cx - r), int(cx + r)):
+                for y in range(int(cy - r), int(cy + r)):
+                    for z in range(int(cz), int(cz + h)):
                         dx = x - cx
                         dy = y - cy
-                        if dx * dx + dy * dy <= r_sqr:
+                        if dx * dx + dy * dy < r_sqr:
                             self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
 
     def _MAP_ConeFunction(self, cx, cy, cz, r, h, axs, flp, blc_typ_arr):
@@ -246,34 +246,34 @@ class __MAP__:
         r_sqr = r * r
 
         if axs == 0: # vertical
-            for x in range(int(cx - r), int(cx + r) + 1):
-                for y in range(int(cy), int(cy + h) + 1):
-                    for z in range(int(cz - r), int(cz + r) + 1):
+            for x in range(int(cx - r), int(cx + r)):
+                for y in range(int(cy), int(cy + h)):
+                    for z in range(int(cz - r), int(cz + r)):
                         dy = y - cy
                         dx = x - cx
                         dz = z - cz
                         t = (dy / h) if flp == 1 else 1.0 - (dy / h)
-                        if dy >= 0 and dx * dx + dz * dz <= r_sqr * t * t:
+                        if dy >= 0 and dx * dx + dz * dz < r_sqr * t * t:
                             self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
         elif axs == 1: # horizontal along x
-            for x in range(int(cx), int(cx + h) + 1):
-                for y in range(int(cy - r), int(cy + r) + 1):
-                    for z in range(int(cz - r), int(cz + r) + 1):
+            for x in range(int(cx), int(cx + h)):
+                for y in range(int(cy - r), int(cy + r)):
+                    for z in range(int(cz - r), int(cz + r)):
                         dx = x - cx
                         dy = y - cy
                         dz = z - cz
                         t = (dx / h) if flp == 1 else 1.0 - (dx / h)
-                        if dx >= 0 and dy * dy + dz * dz <= r_sqr * t * t:
+                        if dx >= 0 and dy * dy + dz * dz < r_sqr * t * t:
                             self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
         elif axs == 2: # horizontal along z
-            for x in range(int(cx - r), int(cx + r) + 1):
-                for y in range(int(cy - r), int(cy + r) + 1):
-                    for z in range(int(cz), int(cz + h) + 1):
+            for x in range(int(cx - r), int(cx + r)):
+                for y in range(int(cy - r), int(cy + r)):
+                    for z in range(int(cz), int(cz + h)):
                         dz = z - cz
                         dx = x - cx
                         dy = y - cy
                         t = (dz / h) if flp == 1 else 1.0 - (dz / h)
-                        if dz >= 0 and dx * dx + dy * dy <= r_sqr * t * t:
+                        if dz >= 0 and dx * dx + dy * dy < r_sqr * t * t:
                             self._BLC_SET(x, y, z, self._BLC_TYP_RND(blc_typ_arr))
 
     def _MAP_TreeFunction(self, x, y, z, h_pre, typ):
@@ -283,7 +283,8 @@ class __MAP__:
 
             self._MAP_CubeFunctionSimple(x, y + h, z, (h * 3) // 4, {"LEAF_MAPLE": 1, "AIR": 4})
             self._MAP_SphereFunction(x, y + h, z, h // 2, {"LEAF_MAPLE": 1, "AIR": 1})
-            self._MAP_CylinderFunction(x, y, z, w, h, 0, ["LOG_MAPLE"])
+            self._MAP_CylinderFunction(x, y, z, w, h, 0, ["LOG_MAPLE"]) # trunk
+            self._MAP_VoxelFunction(x, y + h, z, ["LOG_MAPLE_FULL"]) # tip
         if typ == "PINE":
             h = max(16, h_pre) # minimum pine height of 16
             w = 0.5
@@ -294,7 +295,8 @@ class __MAP__:
             self._MAP_ConeFunction(x, y + ((h * 5) // 8), z, h // 6, h // 3, 0, 0, {"LEAF_PINE": 1, "AIR": 2})
             self._MAP_ConeFunction(x, y + (h // 2), z, h // 5, h // 3, 0, 0, {"LEAF_PINE": 1, "AIR": 2})
             self._MAP_ConeFunction(x, y + ((h * 3) // 8), z, h // 4, h // 3, 0, 0, {"LEAF_PINE": 1, "AIR": 3})
-            self._MAP_CylinderFunction(x, y, z, w, h, 0, ["LOG_PINE"])
+            self._MAP_CylinderFunction(x, y, z, w, h, 0, ["LOG_PINE"]) # trunk
+            self._MAP_VoxelFunction(x, y + h, z, ["LOG_PINE_FULL"]) # tip
         if typ == "REDWOOD":
             h = max(32, h_pre) # minimum redwood height of 32
             w = max(1, (h // 32))
@@ -305,7 +307,8 @@ class __MAP__:
             self._MAP_ConeFunction(x, y + ((h * 5) // 8), z, h // 6, h // 3, 0, 0, {"LEAF_REDWOOD": 1, "AIR": 2})
             self._MAP_ConeFunction(x, y + (h // 2), z, h // 5, h // 3, 0, 0, {"LEAF_REDWOOD": 1, "AIR": 2})
             self._MAP_ConeFunction(x, y + ((h * 3) // 8), z, h // 4, h // 3, 0, 0, {"LEAF_REDWOOD": 1, "AIR": 3})
-            self._MAP_CylinderFunction(x, y, z, w, h, 0, ["LOG_REDWOOD"])
+            self._MAP_CylinderFunction(x, y, z, w, h, 0, ["LOG_REDWOOD"]) # trunk
+            self._MAP_CylinderFunction(x, y + h, z, w, 1, 0, ["LOG_REDWOOD_FULL"]) # tip
         else:
             pass
 
@@ -331,17 +334,17 @@ class __MAP__:
             with open(map_pth, 'r', encoding='utf-8') as f:
                 map_dat = json.load(f)
         except FileNotFoundError:
-            dbg._DBG(dbg._TAG_ERR, ['Map Error', 'File Missing', 'Path'], ['...', map_pth])
+            dbg._DBG(dbg._TAG_ERR, ['Map Error File Missing', 'Path'], ['...', map_pth])
             self._VTX_ARR_NEW()
 
             return
         except json.JSONDecodeError as E:
-            dbg._DBG(dbg._TAG_ERR, ['Map Error', 'JSON Invalid', 'Path', 'Error'], ['...', map_pth, E])
+            dbg._DBG(dbg._TAG_ERR, ['Map Error JSON Invalid', 'Path', 'Error'], ['...', map_pth, E])
             self._VTX_ARR_NEW()
 
             return
         except Exception as E:
-            dbg._DBG(dbg._TAG_ERR, ['Map Error', 'Load Error', 'Path', 'Error'], ['...', map_pth, E])
+            dbg._DBG(dbg._TAG_ERR, ['Map Error Load Error', 'Path', 'Error'], ['...', map_pth, E])
             self._VTX_ARR_NEW()
 
             return

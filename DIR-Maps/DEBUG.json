@@ -3,19 +3,23 @@
     "MAP_DESCRIPTION": "Debug map.",
     "MAP":
     {
-        "VOXELS":
+        "CONES":
         [
-            {"x": 15, "y": 15, "z": 15, "blc_typ": "STONE_LIGHT"}
-        ],
-        "CUBES":
-        [
-            {"x_min": -25, "y_min": -25, "z_min": -25, "x_max": 0, "y_max": 0, "z_max": 0, "blc_typ": "STONE_BRICK_BOLD"},
-            {"x_min": -30, "y_min": -30, "z_min": -30, "x_max": -25, "y_max": -25, "z_max": -25, "blc_typ": "STONE_BRICK_LIGHT"},
-            {"x_min": -100, "y_min": -32, "z_min": -100, "x_max": 100, "y_max": -31, "z_max": 100, "blc_typ": "STONE_BRICK_DARK"}
+            {"x": 8, "y": 20, "z": 8, "r": 6, "h": 8, "axs": 0, "flp": 0, "blc_typ_arr": [
+                "STONE_DEBUG"
+            ]}
         ],
         "SPHERES":
         [
-            {"x": 0, "y": 0, "z": 0, "r": 10, "blc_typ": "STONE_SOLID_DARK"}
+            {"x": -8, "y": 40, "z": -8, "r": 6, "flp": 0, "blc_typ_arr": [
+                "STONE_DEBUG"
+            ]}
+        ],
+        "CYLINDERS":
+        [
+            {"x": 0, "y": 60, "z": 0, "r": 12, "h": 8, "axs": 0, "flp": 0, "blc_typ_arr": [
+                "STONE_DEBUG"
+            ]}
         ]
     }
 }

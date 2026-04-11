@@ -15,7 +15,7 @@ The best voxel engine ever ...
 ```
 pip install -r req.txt
 cp .env.pre .env
-python main.py
+python r.py
 ```
 
 ### Customization:
@@ -27,3 +27,8 @@ python main.py
 ### Atlas:
 
 ![](DIR-Resources/IMG-Texture.png)
+
+### To-Do:
+- Advanced tree functions
+- Advanced shape functions for stretch
+- Generally move `.env` vars to JSON map config
