@@ -32,4 +32,6 @@ python r.py
 - Advanced tree functions
 - "FORESTS"
 - Advanced shape functions for stretch
-- Generally move `.env` vars to JSON map config
+- Generally move `.env` vars to JSON map 
+- Fix slow tick rate on low-performance machines
+- Full-screen
