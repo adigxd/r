@@ -27,3 +27,13 @@ def _UNI_ETC(pro_sha, tex_id, lit_pos, lit_rad, lit_int, lit_col):
     glUniform1f(loc_lit_rad, lit_rad)
     glUniform1f(loc_lit_int, lit_int)
     glUniform3fv(loc_lit_col, 1, lit_col)
+
+# uniforms for post-processing shaders
+def _UNI_PST(pro_sha_pst, tex_unit, res):
+    # set texture uniform for post-processing
+    tex_loc = glGetUniformLocation(pro_sha_pst, 'TEX')
+    glUniform1i(tex_loc, tex_unit)
+
+    # set resolution uniform
+    res_loc = glGetUniformLocation(pro_sha_pst, 'RES')
+    glUniform2f(res_loc, res[0], res[1])

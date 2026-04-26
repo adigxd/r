@@ -18,6 +18,21 @@ cp .env.pre .env
 python r.py
 ```
 
+### Keybinds:
+
+| Key | Use |
+| --- | --- |
+| W / A / S / D | Move forward / left / backward / right |
+| Mouse move | Look around |
+| Right mouse button | Hold to increase movement speed |
+| Space | Fly up in debug mode; jump in normal mode |
+| Left Shift | Fly down in debug mode |
+| Backspace | Reset position |
+| Backslash (`\`) | Cycle post-processing shader |
+| Backquote (`` ` ``) | Save screenshot |
+| Right Ctrl | Toggle wireframe debug mode |
+| Right Shift | Exit |
+
 ### Customization:
 
 - Create your own map in `DIR-Maps` ... set your map in `.env` (`_MAP`)
@@ -30,7 +45,5 @@ python r.py
 
 ### To-Do:
 - Advanced tree functions
-- "FORESTS"
 - Advanced shape functions for stretch
-- Generally move `.env` vars to JSON map 
-- Full-screen
+- Generally move `.env` vars to JSON map

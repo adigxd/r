@@ -1,13 +1,13 @@
 #version 330 core
 
-in vec2 TexCoord;
-out vec4 FragColor;
+in vec2 TEX_OUT;
+out vec4 COL_FNL;
 
-uniform sampler2D TXT;
+uniform sampler2D TEX;
 uniform vec2 RES;
 
 void main() {
-	vec4 COL = texture(TXT, TexCoord);
+	vec4 COL = texture(TEX, TEX_OUT);
 	
-    FragColor = vec4(COL);
+    COL_FNL = vec4(COL);
 }

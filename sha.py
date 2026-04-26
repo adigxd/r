@@ -8,7 +8,7 @@ def _SHA_GEN(pth):
         with open(pth, 'r') as f:
             return f.read()
     except Exception as e:
-        dbg.__DBG(dbg._TAG_ERR, ['_SHA_GEN'], [f'{e}'])
+        dbg._DBG(dbg._TAG_ERR, ['_SHA_GEN'], [f'{e}'])
 
 def _SHA_COM(sha_src, sha_typ):
     sha = glCreateShader(sha_typ)
@@ -16,7 +16,7 @@ def _SHA_COM(sha_src, sha_typ):
     glCompileShader(sha)
     
     if glGetShaderiv(sha, GL_COMPILE_STATUS) != GL_TRUE:
-        dbg.__DBG(dbg._TAG_ERR, ['glGetShaderiv'], [f'{glGetShaderInfoLog(sha)}'])
+        dbg._DBG(dbg._TAG_ERR, ['glGetShaderiv'], [f'{glGetShaderInfoLog(sha)}'])
     
     return sha
 

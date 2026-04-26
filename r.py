@@ -184,9 +184,8 @@ def main():
     tex_id, tex_wid, tex_hei = _TEX_GET(_PTH_TEX)
     dbg._DBG(dbg._TAG_CFG, ['Texture Path', 'Texture ID', 'Width', 'Height'], [_PTH_TEX, tex_id, tex_wid, tex_hei])
 
-    # vao_blc = block vertex array object
-    # vtx_cnt_blc = block vertex count for rendering; these will be generated dynamically based on the chunks that are loaded, and will be used to render the blocks in the scene with the appropriate texture coordinates from the atlas
-
+    # vao_blc: block vertex array object
+    # vtx_cnt_blc: block vertex count for rendering; these will be generated dynamically based on the chunks that are loaded, and will be used to render the blocks in the scene with the appropriate texture coordinates from the atlas
     vao_blc, vtx_cnt_blc = map._MAP_GET() # get the vertex array object and vertex count for rendering the blocks in the scene; this will be updated dynamically based on the chunks that are loaded and the blocks they contain, allowing for efficient rendering of only the visible blocks with the appropriate texture coordinates from the atlas
 
     # ------
@@ -229,7 +228,7 @@ def main():
     pro_sha_pst_typ_arr = list(pro_sha_pst_dct.keys())
     pro_sha_pst_typ_idx = 0
 
-    # vao_pst, vbo_pst, ebo_pst = buf._BUF_PST() # post-processing buffer objects for full-screen quad
+    vao_pst, vbo_pst, ebo_pst = buf._BUF_PST() # post-processing buffer objects for full-screen quad
 
     glUseProgram(pro_sha)
 
@@ -269,8 +268,8 @@ def main():
                 glDeleteFramebuffers(1, [fbo])
                 glDeleteTextures(1, [tex])
                 glDeleteRenderbuffers(1, [rbo])
-                # glDeleteVertexArrays(1, [vao_pst])
-                # glDeleteBuffers(1, [vbo_pst, ebo_pst])
+                glDeleteVertexArrays(1, [vao_pst])
+                glDeleteBuffers(1, [vbo_pst, ebo_pst])
 
                 pygame.quit()
 
@@ -334,7 +333,7 @@ def main():
 
         # cam._CAM_RDR() # look
 
-        # glBindFramebuffer(GL_FRAMEBUFFER, fbo) # bind the frame buffer object for off-screen rendering
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo) # bind the frame buffer object for off-screen rendering
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) # clear the color and depth buffers for the new frame
 
         glUseProgram(pro_sha) # use the main shader program for rendering the scene
@@ -357,15 +356,23 @@ def main():
         else:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL) # this makes blocks look like they are solid, which is the default rendering mode
 
-        # TEMP: only do normal post-processing shader
-        # glBindFramebuffer(GL_FRAMEBUFFER, 0)
-        # glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        # Post-processing pass
+        glBindFramebuffer(GL_FRAMEBUFFER, 0)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        # glUseProgram(0)
-        # glEnable(GL_TEXTURE_2D)
-        # glBindTexture(GL_TEXTURE_2D, tex_id)
-        # glDisable(GL_TEXTURE_2D) # unbind the texture to prevent it from being accidentally used in subsequent rendering operations; this is a good practice to avoid unintended side effects, especially if you have multiple textures and shaders in your application; by unbinding the texture, you ensure that only the intended textures are used when rendering with different shaders or for different objects in the scene
-        # glDisable(GL_DEPTH_TEST) # disable depth testing for post-processing effects (since we're rendering a full-screen quad, we don't need depth testing; this can improve performance and ensure that the post-processing effects are applied correctly without being affected by depth values from the scene rendering)
+        glUseProgram(pro_sha_pst_dct[pro_sha_pst_typ_arr[pro_sha_pst_typ_idx]])
+        glDisable(GL_DEPTH_TEST) # disable depth testing for post-processing effects
+
+        # Bind the FBO texture
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_2D, tex)
+        uni._UNI_PST(pro_sha_pst_dct[pro_sha_pst_typ_arr[pro_sha_pst_typ_idx]], 0, (_RES_X, _RES_Y))
+
+        # Draw the fullscreen quad
+        glBindVertexArray(vao_pst)
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, None)
+
+        glEnable(GL_DEPTH_TEST) # re-enable depth testing
 
         pygame.display.flip() # update the display with the rendered frame
 
