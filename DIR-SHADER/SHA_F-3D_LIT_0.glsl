@@ -93,7 +93,7 @@ void main()
 	
 	// STEP 6: AMBIENT LIGHTING
 	
-	float LIT_AMB = 0.875; // hard-coded so every surface gets at least some brightness to prevent full black
+	float LIT_AMB = 0.0625; // hard-coded so every surface gets at least some brightness to prevent full black
 	
 	
 	// STEP 7: COMBINE

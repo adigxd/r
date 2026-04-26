@@ -75,7 +75,7 @@ class __CAM__:
                     else:
                         self.pos[2] += oz if self.pos[2] > bz + 0.5 else -oz
 
-    def _CAM_SET(self, key_arr, mos_rel, kin):
+    def _CAM_SET(self, key_arr, mos_rel, kin, dlt=1.0):
         # MOUSE LOOK
         self.rot[0] -= mos_rel[1] * self.sen # PITCH
         self.rot[1] += mos_rel[0] * self.sen # YAW
@@ -111,28 +111,28 @@ class __CAM__:
         mov = [0.0, 0.0, 0.0]
 
         if key_arr[pygame.K_w]: # FORWARD
-            mov[0] += fwd[0] * self.spd * spd_fix
-            mov[2] += fwd[2] * self.spd * spd_fix
+            mov[0] += fwd[0] * self.spd * spd_fix * dlt
+            mov[2] += fwd[2] * self.spd * spd_fix * dlt
         if key_arr[pygame.K_s]: # BACKWARD
-            mov[0] -= fwd[0] * self.spd * spd_fix
-            mov[2] -= fwd[2] * self.spd * spd_fix
+            mov[0] -= fwd[0] * self.spd * spd_fix * dlt
+            mov[2] -= fwd[2] * self.spd * spd_fix * dlt
         if key_arr[pygame.K_a]: # LEFT
-            mov[0] -= rit[0] * self.spd * spd_fix
-            mov[2] -= rit[2] * self.spd * spd_fix
+            mov[0] -= rit[0] * self.spd * spd_fix * dlt
+            mov[2] -= rit[2] * self.spd * spd_fix * dlt
         if key_arr[pygame.K_d]: # RIGHT
-            mov[0] += rit[0] * self.spd * spd_fix
-            mov[2] += rit[2] * self.spd * spd_fix
+            mov[0] += rit[0] * self.spd * spd_fix * dlt
+            mov[2] += rit[2] * self.spd * spd_fix * dlt
 
         if self.kin == 0: # DEBUG (FLY)
             if key_arr[pygame.K_SPACE]: # FLY UP
-                mov[1] += self.spd * spd_fix
+                mov[1] += self.spd * spd_fix * dlt
             if key_arr[pygame.K_LSHIFT]: # FLY DOWN
-                mov[1] -= self.spd * spd_fix
+                mov[1] -= self.spd * spd_fix * dlt
         elif self.kin == 1: # NORMAL
-            self.vel_y -= self.acc_d # gravity
+            self.vel_y -= self.acc_d * dlt # gravity
             if key_arr[pygame.K_SPACE] and self.grd: # JUMP
                 self.vel_y = self.jmp_mag
-            mov[1] += self.vel_y
+            mov[1] += self.vel_y * dlt
 
         self.pos[0] += mov[0]
         self._POS_FIX(0)

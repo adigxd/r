@@ -33,5 +33,4 @@ python r.py
 - "FORESTS"
 - Advanced shape functions for stretch
 - Generally move `.env` vars to JSON map 
-- Fix slow tick rate on low-performance machines
 - Full-screen

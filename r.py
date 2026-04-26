@@ -31,9 +31,6 @@ _LIT_RAD = float(os.getenv('LIT_RAD'))
 _LIT_INT = float(os.getenv('LIT_INT'))
 _LIT_COL = tuple(map(float, os.getenv('LIT_COL').split(',')))
 
-dbg._DBG(dbg._TAG_CFG, ["Light Position", "      Radius", "      Intensity", "      Color"], [_LIT_POS, _LIT_RAD, _LIT_INT, _LIT_COL])
-
-
 # main.py
 _THD_CNT = int(os.getenv('THD_CNT'))
 _RES_X = int(os.getenv('RES_X'))
@@ -67,10 +64,11 @@ _PTH_SHA_F_PST_1 = os.getenv('PTH_SHA_F_PST_1')
 # main.py / general paths
 _DIR_SSM = os.getenv('DIR_SSM')
 
+# main.py / music
+_PTH_MSC = os.getenv('PTH_MSC')
+
 # main.py / debug
 _DBG_KIN = int(os.getenv('DBG_KIN'))
-
-dbg._DBG(dbg._TAG_CFG, ['THD_CNT'], [_THD_CNT])
 
 # ------
 
@@ -104,9 +102,15 @@ def main():
     # pygame setup
     res = (_RES_X, _RES_Y)
     pygame.init()
-    pygame.display.set_mode(res, DOUBLEBUF | OPENGL)
+    pygame.mixer.init()
+    pygame.mixer.set_num_channels(2)
+    pygame.display.set_mode(res, DOUBLEBUF | OPENGL | pygame.FULLSCREEN)
     pygame.display.set_caption('r')
     pygame.display.set_icon(pygame.image.load('./DIR-Resources/IMG-WIN.png'))
+
+    # music setup
+    pygame.mixer.music.load(_PTH_MSC)
+    pygame.mixer.music.play(-1)
 
     # opengl setup
     glEnable(GL_DEPTH_TEST)
@@ -256,6 +260,8 @@ def main():
         for E in pygame.event.get():
             if E.type == pygame.QUIT or (E.type == pygame.KEYDOWN and E.key == pygame.K_RSHIFT):
                 # cleanup and exit
+                pygame.mixer.music.stop()
+
                 for pro_sha_pst in pro_sha_pst_dct.values():
                     glDeleteProgram(pro_sha_pst)
 
@@ -305,10 +311,12 @@ def main():
             if E.type == pygame.KEYDOWN and E.key == pygame.K_BACKSPACE:
                 cam._POS_SET(list(_POS))
 
+        dlt = clc.tick(_TIC) / 1000.0
+
         mos_rel = pygame.mouse.get_rel() # get the relative movement of the mouse since the last call to this function
         key_arr = pygame.key.get_pressed() # get the current state of all keyboard buttons
 
-        cam._CAM_SET(key_arr, mos_rel, None) # update camera position and rotation based on input
+        cam._CAM_SET(key_arr, mos_rel, None, dlt) # update camera position and rotation based on input
 
         # update light position
         lit_pos = cam.pos
@@ -360,7 +368,6 @@ def main():
         # glDisable(GL_DEPTH_TEST) # disable depth testing for post-processing effects (since we're rendering a full-screen quad, we don't need depth testing; this can improve performance and ensure that the post-processing effects are applied correctly without being affected by depth values from the scene rendering)
 
         pygame.display.flip() # update the display with the rendered frame
-        clc.tick(_TIC) # limit the frame rate to the specified tick rate (this controls how often the game loop updates and renders, which can help with performance and resource management)
 
 if __name__ == '__main__':
     main()

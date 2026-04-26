@@ -279,15 +279,15 @@ class __MAP__:
     def _MAP_TreeFunction(self, x, y, z, h_pre, typ):
         if typ == "MAPLE":
             h = max(6, h_pre) # minimum maple height of 6
-            w = 0.5
+            w = 1
 
-            self._MAP_CubeFunctionSimple(x, y + h, z, (h * 3) // 4, {"LEAF_MAPLE": 1, "AIR": 4})
-            self._MAP_SphereFunction(x, y + h, z, h // 2, {"LEAF_MAPLE": 1, "AIR": 1})
-            self._MAP_CylinderFunction(x, y, z, w, h, 0, ["LOG_MAPLE"]) # trunk
-            self._MAP_VoxelFunction(x, y + h, z, ["LOG_MAPLE_FULL"]) # tip
+            #self._MAP_CubeFunctionSimple(x, y + h, z, (h * 3) // 4, {"LEAF_MAPLE": 1, "AIR": 4})
+            #self._MAP_SphereFunction(x, y + h, z, h // 2, {"LEAF_MAPLE": 1, "AIR": 1})
+            self._MAP_CylinderFunction(x, y, z, w, h - 1, 0, ["LOG_MAPLE"]) # trunk h-1 blocks
+            self._MAP_VoxelFunction(x, y + h - 1, z, ["LOG_MAPLE_FULL"]) # tip at top, total height h
         if typ == "PINE":
             h = max(16, h_pre) # minimum pine height of 16
-            w = 0.5
+            w = 1
 
             self._MAP_ConeFunction(x, y + h // 4, z, h // 4, h // 8, 0, 1, {"LEAF_PINE": 1, "AIR": 3})
             self._MAP_ConeFunction(x, y + ((h * 7) // 8), z, h // 8, h // 3, 0, 0, {"LEAF_PINE": 1, "AIR": 1})
@@ -295,8 +295,8 @@ class __MAP__:
             self._MAP_ConeFunction(x, y + ((h * 5) // 8), z, h // 6, h // 3, 0, 0, {"LEAF_PINE": 1, "AIR": 2})
             self._MAP_ConeFunction(x, y + (h // 2), z, h // 5, h // 3, 0, 0, {"LEAF_PINE": 1, "AIR": 2})
             self._MAP_ConeFunction(x, y + ((h * 3) // 8), z, h // 4, h // 3, 0, 0, {"LEAF_PINE": 1, "AIR": 3})
-            self._MAP_CylinderFunction(x, y, z, w, h, 0, ["LOG_PINE"]) # trunk
-            self._MAP_VoxelFunction(x, y + h, z, ["LOG_PINE_FULL"]) # tip
+            self._MAP_CylinderFunction(x, y, z, w, h - 1, 0, ["LOG_PINE"]) # trunk h-1 blocks
+            self._MAP_VoxelFunction(x, y + h - 1, z, ["LOG_PINE_FULL"]) # tip at top, total height h
         if typ == "REDWOOD":
             h = max(32, h_pre) # minimum redwood height of 32
             w = max(1, (h // 32))
@@ -307,8 +307,35 @@ class __MAP__:
             self._MAP_ConeFunction(x, y + ((h * 5) // 8), z, h // 6, h // 3, 0, 0, {"LEAF_REDWOOD": 1, "AIR": 2})
             self._MAP_ConeFunction(x, y + (h // 2), z, h // 5, h // 3, 0, 0, {"LEAF_REDWOOD": 1, "AIR": 2})
             self._MAP_ConeFunction(x, y + ((h * 3) // 8), z, h // 4, h // 3, 0, 0, {"LEAF_REDWOOD": 1, "AIR": 3})
-            self._MAP_CylinderFunction(x, y, z, w, h, 0, ["LOG_REDWOOD"]) # trunk
-            self._MAP_CylinderFunction(x, y + h, z, w, 1, 0, ["LOG_REDWOOD_FULL"]) # tip
+            self._MAP_CylinderFunction(x, y, z, w, h - 1, 0, ["LOG_REDWOOD"]) # trunk h-1 blocks
+            self._MAP_VoxelFunction(x, y + h - 1, z, ["LOG_REDWOOD_FULL"]) # tip at top, total height h
+        else:
+            pass
+
+    def _MAP_ForestFunction(self, x, y, z, r, h_avg, h_err, dns, shp, typ):
+        # example function call: _MAP_ForestFunction(0, 0, 0, 16, 20, 4, 0.25, 0, "PINE")
+        # example map.json entry: {"x": 0, "y": 0, "z": 0, "r": 16, "h_avg": 20, "h_err": 4, "dns": 0.25, "shp": 0, "typ": "PINE"}
+        # x, y, z: center coordinates of the forest area
+        # h_avg: average tree height; h_err: maximum random deviation from the average height
+        # dns: density (0 to 1); chance for a tree to spawn at each coordinate location within the radius
+        # shp: 0 = circle of trees, 1 = square
+        # typ: analogous to tree types
+        
+        # circular forest area
+        if shp == 0:
+            r_sqr = r * r
+            for x_off in range(-r, r):
+                for z_off in range(-r, r):
+                    if x_off * x_off + z_off * z_off < r_sqr and random.random() < dns:
+                        h = random.randint(h_avg - h_err, h_avg + h_err)
+                        self._MAP_TreeFunction(x + x_off, y, z + z_off, h, typ)
+        # square forest area
+        elif shp == 1:
+            for x_off in range(-r, r):
+                for z_off in range(-r, r):
+                    if random.random() < dns:
+                        h = random.randint(h_avg - h_err, h_avg + h_err)
+                        self._MAP_TreeFunction(x + x_off, y, z + z_off, h, typ)
         else:
             pass
 
@@ -380,6 +407,11 @@ class __MAP__:
         for tre in map_obj.get('TREES', []):
             self._MAP_TreeFunction(
                 tre['x'], tre['y'], tre['z'], tre['h'], tre['typ']
+            )
+        
+        for fst in map_obj.get('FORESTS', []):
+            self._MAP_ForestFunction(
+                fst['x'], fst['y'], fst['z'], fst['r'], fst['h_avg'], fst['h_err'], fst['dns'], fst['shp'], fst['typ']
             )
 
         self._VTX_ARR_NEW()
