@@ -11,7 +11,7 @@
         ],
         "FORESTS":
         [
-            {"x": 0, "y": 1, "z": 0, "r": 128, "h_avg": 64, "h_err": 32, "dns": 0.001, "shp": 1, "typ": "REDWOOD"}
+            {"x": 0, "y": 1, "z": 0, "r": 128, "h_avg": 96, "h_err": 64, "dns": 0.0005, "shp": 1, "typ": "REDWOOD"}
         ]
     }
 }
