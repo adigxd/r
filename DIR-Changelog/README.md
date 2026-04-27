@@ -1,5 +1,8 @@
 > 2026-04-27: VER-1.1
+- ...
 
 > 2026-04-11: VER-1.0
+- ...
 
 > 2026-04-04: ALF
+- Forked from [Voxelbulb](https://github.com/adigxd/Voxelbulb)
