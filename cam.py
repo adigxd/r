@@ -5,7 +5,6 @@ import pygame
 
 # ./
 import dbg
-# from kin import __KIN__ # TODO: IMPLEMENT
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -75,7 +74,7 @@ class __CAM__:
                     else:
                         self.pos[2] += oz if self.pos[2] > bz + 0.5 else -oz
 
-    def _CAM_SET(self, key_arr, mos_rel, kin, dlt=1.0):
+    def _CAM_SET(self, key_arr, mos_rel, dlt=1.0):
         # MOUSE LOOK
         self.rot[0] -= mos_rel[1] * self.sen # PITCH
         self.rot[1] += mos_rel[0] * self.sen # YAW

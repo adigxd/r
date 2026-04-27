@@ -7,16 +7,16 @@ from OpenGL.GL import *
 def _BUF_PST():
     # Vertex positions and texture coordinates for a fullscreen quad
     vertices = np.array([
-        # Positions (x, y, z)    # Texture coords (u, v)
-        -1.0, -1.0, 0.0,         0.0, 0.0,
-         1.0, -1.0, 0.0,         1.0, 0.0,
-         1.0,  1.0, 0.0,         1.0, 1.0,
-        -1.0,  1.0, 0.0,         0.0, 1.0
+        # Positions (x, y, z) # Texture coords (u, v)
+        -1.0, -1.0, 0.0, 0.0, 0.0,
+         1.0, -1.0, 0.0, 1.0, 0.0,
+         1.0, 1.0, 0.0, 1.0, 1.0,
+        -1.0, 1.0, 0.0, 0.0, 1.0
     ], dtype=np.float32)
     
     indices = np.array([
-        0, 1, 2,  # First triangle
-        0, 2, 3   # Second triangle
+        0, 1, 2, # First triangle
+        0, 2, 3 # Second triangle
     ], dtype=np.uint32)
     
     # Create VAO and buffers

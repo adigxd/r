@@ -15,7 +15,6 @@ import time
 import buf
 from cam import __CAM__
 import dbg
-from kin import _ACC_D
 import mat
 from map_ import __MAP__
 import sha
@@ -320,7 +319,7 @@ def main():
         mos_rel = pygame.mouse.get_rel() # get the relative movement of the mouse since the last call to this function
         key_arr = pygame.key.get_pressed() # get the current state of all keyboard buttons
 
-        cam._CAM_SET(key_arr, mos_rel, None, dlt) # update camera position and rotation based on input
+        cam._CAM_SET(key_arr, mos_rel, dlt) # update camera position and rotation based on input
 
         # update light position
         lit_pos = cam.pos
