@@ -1,9 +1,11 @@
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+
 import math
 import numpy as np
 from multiprocessing import Process, Queue, Manager, freeze_support, set_start_method
 from OpenGL.GL import *
 from OpenGL.GLU import *
-import os
 import pygame
 from pygame.locals import *
 import random
@@ -22,8 +24,6 @@ import uni
 from dotenv import load_dotenv
 
 load_dotenv()
-
-os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1' # hide pygame support prompt
 
 # light
 _LIT_POS = tuple(map(float, os.getenv('LIT_POS').split(',')))
@@ -66,6 +66,11 @@ _DIR_SSM = os.getenv('DIR_SSM')
 
 # main.py / music
 _PTH_MSC = os.getenv('PTH_MSC')
+_MIX_FRQ = int(os.getenv('MIX_FRQ', '44100'))
+_MIX_SIZ = int(os.getenv('MIX_SIZ', '-16'))
+_MIX_CNL_CNT = int(os.getenv('MIX_CNL_CNT', '2'))
+_MIX_BUF = int(os.getenv('MIX_BUF', '512'))
+_MIX_VOL = float(os.getenv('MIX_VOL', '0.5'))
 
 # main.py / debug
 _DBG_KIN = int(os.getenv('DBG_KIN'))
@@ -102,7 +107,7 @@ def main():
     # pygame setup
     res = (_RES_X, _RES_Y)
     pygame.init()
-    pygame.mixer.init()
+    pygame.mixer.init(frequency=_MIX_FRQ, size=_MIX_SIZ, channels=_MIX_CNL_CNT, buffer=_MIX_BUF)
     pygame.mixer.set_num_channels(2)
     pygame.display.set_mode(res, DOUBLEBUF | OPENGL | pygame.FULLSCREEN)
     pygame.display.set_caption('r')
@@ -110,6 +115,7 @@ def main():
 
     # music setup
     pygame.mixer.music.load(_PTH_MSC)
+    pygame.mixer.music.set_volume(_MIX_VOL)
     pygame.mixer.music.play(-1)
 
     # opengl setup
@@ -182,7 +188,6 @@ def main():
 
     # texture setup
     tex_id, tex_wid, tex_hei = _TEX_GET(_PTH_TEX)
-    dbg._DBG(dbg._TAG_CFG, ['Texture Path', 'Texture ID', 'Width', 'Height'], [_PTH_TEX, tex_id, tex_wid, tex_hei])
 
     # vao_blc: block vertex array object
     # vtx_cnt_blc: block vertex count for rendering; these will be generated dynamically based on the chunks that are loaded, and will be used to render the blocks in the scene with the appropriate texture coordinates from the atlas
@@ -257,7 +262,7 @@ def main():
         cnt += 1
 
         for E in pygame.event.get():
-            if E.type == pygame.QUIT or (E.type == pygame.KEYDOWN and E.key == pygame.K_RSHIFT):
+            if E.type == pygame.QUIT or (E.type == pygame.KEYDOWN and E.key == pygame.K_RSHIFT) or (E.type == pygame.ACTIVEEVENT and E.gain == 0):
                 # cleanup and exit
                 pygame.mixer.music.stop()
 
@@ -327,9 +332,9 @@ def main():
             math.floor(cam.pos[2]) + 0.5
         ]
 
-        if cnt % 256 == 0:
-            dbg._DBG(dbg._TAG_DBG, ['cam.pos'], [cam.pos])
-            dbg._DBG(dbg._TAG_DBG, ['cam.rot'], [cam.rot])
+        #if cnt % 256 == 0:
+        #    dbg._DBG(dbg._TAG_DBG, ['cam.pos'], [cam.pos])
+        #    dbg._DBG(dbg._TAG_DBG, ['cam.rot'], [cam.rot])
 
         # cam._CAM_RDR() # look
 

@@ -47,3 +47,4 @@ python r.py
 - Advanced tree functions
 - Advanced shape functions for stretch
 - Generally move `.env` vars to JSON map
+- cli w/e

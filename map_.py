@@ -355,8 +355,6 @@ class __MAP__:
         map_nam = _MAP if _MAP.lower().endswith('.json') else f'{_MAP}.json'
         map_pth = os.path.join(_DIR_MAP, map_nam)
 
-        dbg._DBG(dbg._TAG_CFG, ['Map File'], [map_pth])
-
         try:
             with open(map_pth, 'r', encoding='utf-8') as f:
                 map_dat = json.load(f)
