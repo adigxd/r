@@ -2,7 +2,7 @@
 
 ### What?
 
-The best voxel engine ever ...
+The best voxel engine ever
 
 ### CLI:
 
