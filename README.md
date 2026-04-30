@@ -44,3 +44,4 @@ python r.py
 - CLI:
     - W/E
     - Other (map sel, etc.)
+- On hotkey, place at pos ... eventually make it place at end of directed ray
