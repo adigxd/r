@@ -1,23 +1,10 @@
 from array import array
 import numpy as np
 from OpenGL.GL import *
-import os
-import json
 import random
 
 # ./
 import buf
-import dbg
-
-from dotenv import load_dotenv
-load_dotenv()
-
-# map*.py
-_SED               = int(os.getenv('SED'))
-_BLC_SIZ           = int(os.getenv('BLC_SIZ'))
-_TEX_SIZ           = int(os.getenv('TEX_SIZ'))
-_DIR_MAP           = os.getenv('DIR_MAP')
-_MAP               = os.getenv('MAP')
 
 # format: "BLK_TYP": {"top": (col, row), "sid": (col, row), "bot": (col, row)} or {"all": (col, row)} (if all faces of the block use the same texture)
 # "AIR" is typically used in map files to represent empty space and is not included here since it doesn't correspond to an actual block type that needs vertex data
@@ -58,7 +45,7 @@ _BLC_TYP_ARR = {
 }
 
 class __MAP__:
-    def __init__(self, sed=_SED, blc_siz=_BLC_SIZ, tex_siz=_TEX_SIZ):
+    def __init__(self, sed, blc_siz, tex_siz):
         self.sed = sed
         self.blc_siz = blc_siz
         self.tex_siz = tex_siz
@@ -112,10 +99,10 @@ class __MAP__:
 
     def _TEX_LOC(self, col, row):
         # get texture coordinates for a block located at (col, row) in the texture atlas
-        u0 = (col * _BLC_SIZ) / _TEX_SIZ
-        v0 = (row * _BLC_SIZ) / _TEX_SIZ
-        u1 = ((col + 1) * _BLC_SIZ) / _TEX_SIZ
-        v1 = ((row + 1) * _BLC_SIZ) / _TEX_SIZ
+        u0 = (col * self.blc_siz) / self.tex_siz
+        v0 = (row * self.blc_siz) / self.tex_siz
+        u1 = ((col + 1) * self.blc_siz) / self.tex_siz
+        v1 = ((row + 1) * self.blc_siz) / self.tex_siz
         
         return [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]
     
@@ -353,41 +340,12 @@ class __MAP__:
             pass
 
 
-    def _MAP_SET(self):
+    def _MAP_SET(self, map_obj):
+        # build the map from the "MAP" object of a map file (loaded by cfg._CFG_LOAD)
         random.seed(self.sed)
 
         self.blc_arr = {}
         self.new = True
-
-        if not _DIR_MAP or not _MAP:
-            dbg._DBG(dbg._TAG_ERR, ['Map Error'], ['DIR_MAP and MAP must be set'])
-            self._VTX_ARR_NEW()
-
-            return
-        
-        map_nam = _MAP if _MAP.lower().endswith('.json') else f'{_MAP}.json'
-        map_pth = os.path.join(_DIR_MAP, map_nam)
-
-        try:
-            with open(map_pth, 'r', encoding='utf-8') as f:
-                map_dat = json.load(f)
-        except FileNotFoundError:
-            dbg._DBG(dbg._TAG_ERR, ['Map Error File Missing', 'Path'], ['...', map_pth])
-            self._VTX_ARR_NEW()
-
-            return
-        except json.JSONDecodeError as E:
-            dbg._DBG(dbg._TAG_ERR, ['Map Error JSON Invalid', 'Path', 'Error'], ['...', map_pth, E])
-            self._VTX_ARR_NEW()
-
-            return
-        except Exception as E:
-            dbg._DBG(dbg._TAG_ERR, ['Map Error Load Error', 'Path', 'Error'], ['...', map_pth, E])
-            self._VTX_ARR_NEW()
-
-            return
-
-        map_obj = map_dat.get('MAP', {})
 
         for vxl in map_obj.get('VOXELS', []):
             self._MAP_VoxelFunction(vxl['x'], vxl['y'], vxl['z'], vxl['blc_typ_arr'])
@@ -427,9 +385,6 @@ class __MAP__:
 
         self._VTX_ARR_NEW()
 
-    def _DBG_MAP_SET(self):
-        self._MAP_SET()
-    
     def _MAP_GET(self):
         if self.new:
             self._VTX_ARR_NEW()

@@ -1,6 +1,7 @@
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
+import argparse
 import math
 import numpy as np
 from multiprocessing import Process, Queue, Manager, freeze_support, set_start_method
@@ -14,65 +15,12 @@ import time
 # ./
 import buf
 from cam import __CAM__
+import cfg
 import dbg
 import mat
 from map_ import __MAP__
 import sha
 import uni
-
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# light
-_LIT_POS = tuple(map(float, os.getenv('LIT_POS').split(',')))
-_LIT_RAD = float(os.getenv('LIT_RAD'))
-_LIT_INT = float(os.getenv('LIT_INT'))
-_LIT_COL = tuple(map(float, os.getenv('LIT_COL').split(',')))
-
-# main.py
-_THD_CNT = int(os.getenv('THD_CNT'))
-_RES_X = int(os.getenv('RES_X'))
-_RES_Y = int(os.getenv('RES_Y'))
-_TIC = int(os.getenv('TIC'))
-_FOV = float(os.getenv('FOV'))
-_SEE_MIN = float(os.getenv('SEE_MIN'))
-_SEE_MAX = float(os.getenv('SEE_MAX'))
-_SEN = float(os.getenv('SEN'))
-_LIN_WID = float(os.getenv('LIN_WID'))
-_COL_BKG = tuple(map(float, os.getenv('COL_BKG').split(',')))
-_POS = tuple(map(float, os.getenv('POS').split(',')))
-_SPD = float(os.getenv('SPD'))
-_SPD_MAG = float(os.getenv('SPD_MAG'))
-_WID = float(os.getenv('WID'))
-_HIT = float(os.getenv('HIT'))
-_JMP_MAG = float(os.getenv('JMP_MAG'))
-_ACC_D = float(os.getenv('ACC_D'))
-
-# main.py / texture paths
-_PTH_TEX = os.getenv('PTH_TEX')
-
-# main.py / shader paths
-_PTH_SHA_V = os.getenv('PTH_SHA_V')
-_PTH_SHA_F = os.getenv('PTH_SHA_F')
-_PTH_SHA_V_PST = os.getenv('PTH_SHA_V_PST')
-_PTH_SHA_F_PST_DEF = os.getenv('PTH_SHA_F_PST_DEF')
-_PTH_SHA_F_PST_0 = os.getenv('PTH_SHA_F_PST_0')
-_PTH_SHA_F_PST_1 = os.getenv('PTH_SHA_F_PST_1')
-
-# main.py / general paths
-_DIR_SSM = os.getenv('DIR_SSM')
-
-# main.py / music
-_PTH_MSC = os.getenv('PTH_MSC')
-_MIX_FRQ = int(os.getenv('MIX_FRQ', '44100'))
-_MIX_SIZ = int(os.getenv('MIX_SIZ', '-16'))
-_MIX_CNL_CNT = int(os.getenv('MIX_CNL_CNT', '2'))
-_MIX_BUF = int(os.getenv('MIX_BUF', '512'))
-_MIX_VOL = float(os.getenv('MIX_VOL', '0.5'))
-
-# main.py / debug
-_DBG_KIN = int(os.getenv('DBG_KIN'))
 
 # ------
 
@@ -100,13 +48,19 @@ def _TEX_GET(pth):
 
 # ------
 
-def main():
+def main(map_nam):
+    # all settings come from the map file ("CONFIG"), so it has to load before anything else starts
+    cfg_dat, map_obj = cfg._CFG_LOAD(map_nam)
+
+    if cfg_dat is None: # the reason has already been printed
+        exit(1)
+
     dbg_see = False # debug see-through mode toggle
 
     # pygame setup
-    res = (_RES_X, _RES_Y)
+    res = (cfg_dat.RES_X, cfg_dat.RES_Y)
     pygame.init()
-    pygame.mixer.init(frequency=_MIX_FRQ, size=_MIX_SIZ, channels=_MIX_CNL_CNT, buffer=_MIX_BUF)
+    pygame.mixer.init(frequency=cfg_dat.MIX_FRQ, size=cfg_dat.MIX_SIZ, channels=cfg_dat.MIX_CNL_CNT, buffer=cfg_dat.MIX_BUF)
     pygame.mixer.set_num_channels(2)
     pygame.display.set_mode(res, DOUBLEBUF | OPENGL | pygame.FULLSCREEN)
     pygame.display.set_caption('r')
@@ -114,11 +68,11 @@ def main():
 
     # music setup
     try:
-        pygame.mixer.music.load(_PTH_MSC)
-        pygame.mixer.music.set_volume(_MIX_VOL)
+        pygame.mixer.music.load(cfg_dat.PTH_MSC)
+        pygame.mixer.music.set_volume(cfg_dat.MIX_VOL)
         pygame.mixer.music.play(-1)
     except Exception as E:
-        dbg._DBG(dbg._TAG_ERR, ['Music Error', 'Path', 'Error'], ['...', _PTH_MSC, E])
+        dbg._DBG(dbg._TAG_ERR, ['Music Error', 'Path', 'Error'], ['...', cfg_dat.PTH_MSC, E])
 
     # opengl setup
     glEnable(GL_DEPTH_TEST)
@@ -127,7 +81,7 @@ def main():
     glEnable(GL_CULL_FACE)
     glCullFace(GL_BACK)
     glFrontFace(GL_CCW)
-    glClearColor(*_COL_BKG, 1) # set background color
+    glClearColor(*cfg_dat.COL_BKG, 1) # set background color
 
     # ------
 
@@ -138,7 +92,7 @@ def main():
     # create texture to render to
     tex = glGenTextures(1)
     glBindTexture(GL_TEXTURE_2D, tex)
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _RES_X, _RES_Y, 0, GL_RGBA, GL_UNSIGNED_BYTE, None)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, cfg_dat.RES_X, cfg_dat.RES_Y, 0, GL_RGBA, GL_UNSIGNED_BYTE, None)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0)
@@ -146,7 +100,7 @@ def main():
     # create renderbuffer for depth and stencil attachments
     rbo = glGenRenderbuffers(1)
     glBindRenderbuffer(GL_RENDERBUFFER, rbo)
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, _RES_X, _RES_Y)
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, cfg_dat.RES_X, cfg_dat.RES_Y)
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo)
 
     # check framebuffer status
@@ -162,34 +116,34 @@ def main():
     # perspective matrix setup
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluPerspective(_FOV, _RES_X / _RES_Y, _SEE_MIN, _SEE_MAX)
+    gluPerspective(cfg_dat.FOV, cfg_dat.RES_X / cfg_dat.RES_Y, cfg_dat.SEE_MIN, cfg_dat.SEE_MAX)
     glMatrixMode(GL_MODELVIEW)
 
     # ------
 
     # map setup
-    map = __MAP__()
-    map._DBG_MAP_SET() # set up a test map with some blocks for rendering; this will be replaced with dynamic chunk loading and generation based on the player's position in the world, but for now it serves as a simple test case to ensure that the rendering pipeline is working correctly with the block vertex data and texture coordinates from the atlas
+    map = __MAP__(cfg_dat.SED, cfg_dat.BLC_SIZ, cfg_dat.TEX_SIZ)
+    map._MAP_SET(map_obj) # build the map from the map file; this will be replaced with dynamic chunk loading and generation based on the player's position in the world, but for now it serves as a simple test case to ensure that the rendering pipeline is working correctly with the block vertex data and texture coordinates from the atlas
 
     # ------
 
     # camera and mouse setup
-    cam = __CAM__(_DBG_KIN, _JMP_MAG, _ACC_D, _WID, _HIT, list(_POS), _SPD, _SEN, map=map)
+    cam = __CAM__(cfg_dat.DBG_KIN, cfg_dat.JMP_MAG, cfg_dat.ACC_D, cfg_dat.WID, cfg_dat.HIT, list(cfg_dat.POS), cfg_dat.SPD, cfg_dat.SEN, map=map)
     pygame.mouse.set_visible(False)
     pygame.event.set_grab(True)
 
     # ------
 
     # lighting setup
-    lit_pos = _LIT_POS
-    lit_rad = _LIT_RAD
-    lit_int = _LIT_INT
-    lit_col = _LIT_COL
+    lit_pos = cfg_dat.LIT_POS
+    lit_rad = cfg_dat.LIT_RAD
+    lit_int = cfg_dat.LIT_INT
+    lit_col = cfg_dat.LIT_COL
 
     # ------
 
     # texture setup
-    tex_id, tex_wid, tex_hei = _TEX_GET(_PTH_TEX)
+    tex_id, tex_wid, tex_hei = _TEX_GET(cfg_dat.PTH_TEX)
 
     # vao_blc: block vertex array object
     # vtx_cnt_blc: block vertex count for rendering; these will be generated dynamically based on the chunks that are loaded, and will be used to render the blocks in the scene with the appropriate texture coordinates from the atlas
@@ -198,8 +152,8 @@ def main():
     # ------
 
     # shader setup
-    sha_src_vec = sha._SHA_GEN(_PTH_SHA_V)
-    sha_src_frg = sha._SHA_GEN(_PTH_SHA_F)
+    sha_src_vec = sha._SHA_GEN(cfg_dat.PTH_SHA_V)
+    sha_src_frg = sha._SHA_GEN(cfg_dat.PTH_SHA_F)
 
     if not sha_src_vec or not sha_src_frg:
         pygame.quit()
@@ -211,11 +165,11 @@ def main():
         pygame.quit()
         exit()
 
-    sha_src_vec_pst = sha._SHA_GEN(_PTH_SHA_V_PST)
+    sha_src_vec_pst = sha._SHA_GEN(cfg_dat.PTH_SHA_V_PST)
     sha_src_frg_pst_dct = {
-        'DEFAULT': sha._SHA_GEN(_PTH_SHA_F_PST_DEF),
-        'EDGE_DETECT': sha._SHA_GEN(_PTH_SHA_F_PST_0),
-        'DITHER': sha._SHA_GEN(_PTH_SHA_F_PST_1)
+        'DEFAULT': sha._SHA_GEN(cfg_dat.PTH_SHA_F_PST_DEF),
+        'EDGE_DETECT': sha._SHA_GEN(cfg_dat.PTH_SHA_F_PST_0),
+        'DITHER': sha._SHA_GEN(cfg_dat.PTH_SHA_F_PST_1)
     }
 
     if not sha_src_vec_pst or not any(sha_src_frg_pst_dct.values()):
@@ -242,11 +196,11 @@ def main():
     # ------
 
     # matrices setup
-    res_rat = _RES_X / _RES_Y # aspect ratio for perspective matrix
-    mat_p = mat._GEN_MAT_P(_FOV, res_rat, _SEE_MIN, _SEE_MAX) # perspective projection matrix
+    res_rat = cfg_dat.RES_X / cfg_dat.RES_Y # aspect ratio for perspective matrix
+    mat_p = mat._GEN_MAT_P(cfg_dat.FOV, res_rat, cfg_dat.SEE_MIN, cfg_dat.SEE_MAX) # perspective projection matrix
     mat_m = mat._GEN_MAT_M() # use defaults for model matrix (no transformations)
 
-    glLineWidth(_LIN_WID) # set line width for wireframe rendering (if used)
+    glLineWidth(cfg_dat.LIN_WID) # set line width for wireframe rendering (if used)
 
     # ------
 
@@ -295,11 +249,11 @@ def main():
                 # are fully executed before you read the pixel data with glReadPixels()
 
                 glFinish() # wait for all OpenGL commands to complete
-                pxl_dat = glReadPixels(0, 0, _RES_X, _RES_Y, GL_RGBA, GL_UNSIGNED_BYTE) # read pixel data from the default framebuffer (the screen)
+                pxl_dat = glReadPixels(0, 0, cfg_dat.RES_X, cfg_dat.RES_Y, GL_RGBA, GL_UNSIGNED_BYTE) # read pixel data from the default framebuffer (the screen)
                 sfc = pygame.image.frombuffer(pxl_dat, res, 'RGBA') # create a pygame surface from the pixel data (surface is a 2D image that can be drawn on the screen)
                 sfc = pygame.transform.flip(sfc, False, True) # flip the surface vertically (OpenGL's origin is bottom-left, while Pygame's is top-left)
 
-                pth_ssm = os.path.join(_DIR_SSM, f'{int(time.time())}.png') # create a unique file path for the screenshot using the current timestamp
+                pth_ssm = os.path.join(cfg_dat.DIR_SSM, f'{int(time.time())}.png') # create a unique file path for the screenshot using the current timestamp
                 pygame.image.save(sfc, pth_ssm) # save the surface as a PNG image to the specified file path
                 dbg._DBG(dbg._TAG_DBG, ['Screenshot Mode'], ['...'])
 
@@ -309,16 +263,16 @@ def main():
             
             if E.type == pygame.MOUSEBUTTONDOWN:
                 if E.button == 3:
-                    cam._SPD_SET(_SPD * _SPD_MAG)
+                    cam._SPD_SET(cfg_dat.SPD * cfg_dat.SPD_MAG)
 
             if E.type == pygame.MOUSEBUTTONUP:
                 if E.button == 3:
-                    cam._SPD_SET(_SPD)
+                    cam._SPD_SET(cfg_dat.SPD)
 
             if E.type == pygame.KEYDOWN and E.key == pygame.K_BACKSPACE:
-                cam._POS_SET(list(_POS))
+                cam._POS_SET(list(cfg_dat.POS))
 
-        dlt = clc.tick(_TIC) / 1000.0
+        dlt = clc.tick(cfg_dat.TIC) / 1000.0
 
         mos_rel = pygame.mouse.get_rel() # get the relative movement of the mouse since the last call to this function
         key_arr = pygame.key.get_pressed() # get the current state of all keyboard buttons
@@ -374,7 +328,7 @@ def main():
         # Bind the FBO texture
         glActiveTexture(GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_2D, tex)
-        uni._UNI_PST(pro_sha_pst_dct[pro_sha_pst_typ_arr[pro_sha_pst_typ_idx]], 0, (_RES_X, _RES_Y))
+        uni._UNI_PST(pro_sha_pst_dct[pro_sha_pst_typ_arr[pro_sha_pst_typ_idx]], 0, (cfg_dat.RES_X, cfg_dat.RES_Y))
 
         # Draw the fullscreen quad
         glBindVertexArray(vao_pst)
@@ -385,4 +339,8 @@ def main():
         pygame.display.flip() # update the display with the rendered frame
 
 if __name__ == '__main__':
-    main()
+    psr = argparse.ArgumentParser(description='r')
+    psr.add_argument('map', nargs='?', default='1', help='map file in DIR-Maps, with or without .json; it also holds all settings (default: 1)')
+    arg = psr.parse_args()
+
+    main(arg.map)

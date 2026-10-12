@@ -8,9 +8,10 @@ The best voxel engine ever
 
 ```
 pip install -r req.txt
-cp .env.pre .env
-python r.py
+python r.py [map]
 ```
+
+`map` is a file in `DIR-Maps` (with or without `.json`); default is `1`.
 
 ### Keybinds:
 
@@ -29,8 +30,8 @@ python r.py
 
 ### Customization:
 
-- Create your own map in `DIR-Maps` ... set your map in `.env` (`_MAP`)
-- Edit other variables in `.env`
+- Create your own map in `DIR-Maps` ... run it with `python r.py <map>`
+- All settings (resolution, speed, light, paths, music, etc.) live in the `CONFIG` block of the map file, so every map can have its own; `cfg.py` lists every key and what it does
 - Edit the textures in `DIR-Resources/IMG-Texture.png`
 
 ### Atlas:
@@ -40,8 +41,7 @@ python r.py
 ### To-Do:
 - Advanced tree functions
 - Advanced shape functions for stretch
-- Generally move `.env` vars to JSON map
 - CLI:
     - W/E
-    - Other (map sel, etc.)
+    - Other (etc.)
 - On hotkey, place at pos ... eventually make it place at end of directed ray

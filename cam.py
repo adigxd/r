@@ -6,9 +6,6 @@ import pygame
 # ./
 import dbg
 
-from dotenv import load_dotenv
-load_dotenv()
-
 class __CAM__:
     def __init__(self, kin, jmp_mag, acc_d, wid, hit, pos, spd, sen, rot=[0, 0], map=None):
         self.kin = kin
