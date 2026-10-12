@@ -1,4 +1,4 @@
-# IMG-Texture.png
+# atlas.png
 
 Inner Log:
 - Sand layered over with 64 / 128 opacity & normal / xor blending

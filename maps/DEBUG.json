@@ -1,0 +1,74 @@
+{
+    "name": "DEBUG",
+    "description": "Debug map.",
+    "config":
+    {
+        "light_pos": [0.0, 0.0, 0.0],
+        "light_radius": 16,
+        "light_intensity": 1,
+        "light_color": [0.5, 0.875, 1.0],
+
+        "seed": 7987523224469270,
+        "tile_size": 32,
+        "atlas_size": 512,
+
+        "threads": 4,
+        "width": 1920,
+        "height": 1080,
+        "max_fps": 128,
+        "fov": 90.0,
+        "near_clip": 0.1,
+        "far_clip": 4096.0,
+        "mouse_sensitivity": 0.08,
+        "line_width": 1.0,
+        "background_color": [0.0078125, 0.0078125, 0.0078125],
+        "start_pos": [0.0, 2.0, 0.0],
+        "speed": 8,
+        "sprint_multiplier": 4.0,
+        "player_width": 0.5,
+        "player_height": 1.5,
+        "gravity": 24,
+        "jump_speed": 6,
+
+        "atlas_path": "./resources/atlas.png",
+
+        "block_vertex_shader": "./shaders/block.vert",
+        "block_fragment_shader": "./shaders/block.frag",
+        "post_vertex_shader": "./shaders/post.vert",
+        "post_default_shader": "./shaders/post_default.frag",
+        "post_edge_shader": "./shaders/post_edge.frag",
+        "post_dither_shader": "./shaders/post_dither.frag",
+
+        "screenshot_dir": "./screenshots",
+
+        "music_path": "./resources/music/1.mp3",
+        "mixer_frequency": 44100,
+        "mixer_size": -16,
+        "mixer_channels": 2,
+        "mixer_buffer": 2048,
+        "music_volume": 0.25,
+
+        "fly": false
+    },
+    "world":
+    {
+        "cones":
+        [
+            {"x": 8, "y": 20, "z": 8, "radius": 6, "height": 8, "axis": "y", "flip": false, "blocks": [
+                "STONE_DEBUG"
+            ]}
+        ],
+        "spheres":
+        [
+            {"x": -8, "y": 40, "z": -8, "radius": 6, "flip": false, "blocks": [
+                "STONE_DEBUG"
+            ]}
+        ],
+        "cylinders":
+        [
+            {"x": 0, "y": 60, "z": 0, "radius": 12, "height": 8, "axis": "y", "flip": false, "blocks": [
+                "STONE_DEBUG"
+            ]}
+        ]
+    }
+}

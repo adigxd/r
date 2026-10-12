@@ -7,11 +7,11 @@ The best voxel engine ever
 ### CLI:
 
 ```
-pip install -r req.txt
+pip install -r requirements.txt
 python r.py [map]
 ```
 
-`map` is a file in `DIR-Maps` (with or without `.json`); default is `1`.
+`map` is a file in `maps` (with or without `.json`); default is `1`.
 
 ### Keybinds:
 
@@ -30,13 +30,32 @@ python r.py [map]
 
 ### Customization:
 
-- Create your own map in `DIR-Maps` ... run it with `python r.py <map>`
-- All settings (resolution, speed, light, paths, music, etc.) live in the `CONFIG` block of the map file, so every map can have its own; `cfg.py` lists every key and what it does
-- Edit the textures in `DIR-Resources/IMG-Texture.png`
+- Create your own map in `maps` ... run it with `python r.py <map>`
+- All settings (resolution, speed, light, paths, music, etc.) live in the `config` block of the map file, so every map can have its own; `config.py` lists every key and what it does
+- The blocks live in the `world` block of the map file (`voxels`, `cubes`, `spheres`, `cylinders`, `cones`, `trees`, `forests`); block names are in `world.py`
+- Edit the textures in `resources/atlas.png`
+
+### Files:
+
+| File | What |
+| --- | --- |
+| `r.py` | Entry point: window, main loop, post-processing |
+| `config.py` | Loads a map file and its settings |
+| `world.py` | Blocks, shapes / trees, and the block mesh |
+| `camera.py` | Movement, mouse look, collisions |
+| `matrices.py` | Model / view / projection matrices |
+| `buffers.py` | OpenGL vertex buffers |
+| `glsl.py` | Shader loading and compiling |
+| `uniforms.py` | Shader uniform values |
+| `log.py` | Console logging |
+| `maps/` | Map files (settings + blocks) |
+| `shaders/` | GLSL shaders (`block.*` for the world, `post*.frag` for post-processing) |
+| `resources/` | Texture atlas, window icon, music |
+| `CHANGELOG.md` | Version history |
 
 ### Atlas:
 
-![](DIR-Resources/IMG-Texture.png)
+![](resources/atlas.png)
 
 ### To-Do:
 - Advanced tree functions

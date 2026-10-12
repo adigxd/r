@@ -12,5 +12,5 @@ ENV/
 __pycache__/
 
 DIR-Old/
-DIR-Screenshots/
+screenshots/
 DIR-Test/

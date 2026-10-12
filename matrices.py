@@ -1,19 +1,16 @@
 import numpy as np
 from OpenGL.GL import *
 
-def _GEN_MAT_M(pos=[0,0,0], rot=[0,0,0], scl=[1,1,1]):
-    # Create 4x4 identity matrix filled with zeros except diagonal which is 1
-    mat = np.identity(4, dtype=np.float32)
-    
+def model_matrix(pos=(0, 0, 0), rot=(0, 0, 0), scale=(1, 1, 1)):
     # Create translation matrix and set last column (except w) to position values
-    mat_trs = np.identity(4, dtype=np.float32)
-    mat_trs[0:3, 3] = pos # Sets x,y,z translation in 4th column
+    translation = np.identity(4, dtype=np.float32)
+    translation[0:3, 3] = pos # Sets x,y,z translation in 4th column
 
     # Create 3 separate rotation matrices for x,y,z axes
     rot_x = np.identity(4, dtype=np.float32)
     rot_y = np.identity(4, dtype=np.float32)
     rot_z = np.identity(4, dtype=np.float32)
-    
+
     # X rotation matrix - rotates around x axis
     rot_x[1,1] = np.cos(rot[0]) # cos θ
     rot_x[1,2] = -np.sin(rot[0]) # -sin θ
@@ -33,62 +30,61 @@ def _GEN_MAT_M(pos=[0,0,0], rot=[0,0,0], scl=[1,1,1]):
     rot_z[1,1] = np.cos(rot[2]) # cos θ
 
     # Scale matrix - stretches/shrinks along each axis
-    mat_scl = np.identity(4, dtype=np.float32)
-    mat_scl[0,0] = scl[0] # X scale
-    mat_scl[1,1] = scl[1] # Y scale
-    mat_scl[2,2] = scl[2] # Z scale
-    
-    # Combine all transforms in order: translate * rotX * rotY * rotZ * scale
-    mat = mat_trs @ rot_x @ rot_y @ rot_z @ mat_scl
-    return mat
+    scaling = np.identity(4, dtype=np.float32)
+    scaling[0,0] = scale[0] # X scale
+    scaling[1,1] = scale[1] # Y scale
+    scaling[2,2] = scale[2] # Z scale
 
-def _GEN_MAT_V(cam_pos, cam_rot):
+    # Combine all transforms in order: translate * rotX * rotY * rotZ * scale
+    return translation @ rot_x @ rot_y @ rot_z @ scaling
+
+def view_matrix(cam_pos, cam_rot):
     # Convert camera rotation angles from degrees to radians
-    pit = np.radians(cam_rot[0]) # Up/down rotation
+    pitch = np.radians(cam_rot[0]) # Up/down rotation
     yaw = np.radians(cam_rot[1]) # Left/right rotation
 
     # Calculate forward vector - where camera is looking
-    fwd = np.array([
-        np.sin(yaw) * np.cos(pit), # X component
-        np.sin(pit), # Y component
-        -np.cos(yaw) * np.cos(pit) # Z component
+    forward = np.array([
+        np.sin(yaw) * np.cos(pitch), # X component
+        np.sin(pitch), # Y component
+        -np.cos(yaw) * np.cos(pitch) # Z component
     ])
-    
+
     # Calculate right vector using cross product of forward and world-up
-    rit = np.cross(fwd, [0, 1, 0])
-    rit = rit / np.linalg.norm(rit) # Normalize to unit length
-    
+    right = np.cross(forward, [0, 1, 0])
+    right = right / np.linalg.norm(right) # Normalize to unit length
+
     # Calculate camera's up vector using cross product of right and forward
-    up = np.cross(rit, fwd)
-    
+    up = np.cross(right, forward)
+
     # Create rotation part of view matrix
     rotation = np.identity(4, dtype=np.float32)
-    rotation[0, 0:3] = rit # First row is right vector
+    rotation[0, 0:3] = right # First row is right vector
     rotation[1, 0:3] = up # Second row is up vector
-    rotation[2, 0:3] = -fwd # Third row is negative forward vector
-    
+    rotation[2, 0:3] = -forward # Third row is negative forward vector
+
     # Create translation matrix
     translation = np.identity(4, dtype=np.float32)
     translation[0:3, 3] = -np.array(cam_pos) # Negative camera position
-    
+
     # Combine rotation and translation
     return rotation @ translation
 
-def _GEN_MAT_P(fov, res_rat, see_min, see_max):
+def projection_matrix(fov, aspect, near, far):
     # Convert field of view from degrees to radians
     fov_rad = np.radians(fov)
 
     # Calculate scaling factor based on FOV
     f = 1.0 / np.tan(fov_rad / 2.0)
-    
-    # Create empty 4x4 matrix
-    mat = np.zeros((4, 4), dtype=np.float32)
-    
-    # Set perspective transform values
-    mat[0,0] = f / res_rat # X scale (adjusted for aspect ratio)
-    mat[1,1] = f # Y scale
-    mat[2,2] = (see_max + see_min) / (see_min - see_max) # Z scale
-    mat[2,3] = (2.0 * see_max * see_min) / (see_min - see_max) # Z translation
-    mat[3,2] = -1.0 # Set w coordinate for perspective divide
 
-    return mat
+    # Create empty 4x4 matrix
+    matrix = np.zeros((4, 4), dtype=np.float32)
+
+    # Set perspective transform values
+    matrix[0,0] = f / aspect # X scale (adjusted for aspect ratio)
+    matrix[1,1] = f # Y scale
+    matrix[2,2] = (far + near) / (near - far) # Z scale
+    matrix[2,3] = (2.0 * far * near) / (near - far) # Z translation
+    matrix[3,2] = -1.0 # Set w coordinate for perspective divide
+
+    return matrix
