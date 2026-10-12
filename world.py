@@ -45,6 +45,18 @@ BLOCK_TYPES = {
     "STONE_DEBUG": {"top": (6, 0), "side": (0, 0), "bottom": (0, 0)},
 }
 
+def unpack_scale(scale, name='scale'):
+    # scale / size can be one number (used for x, y and z) or [x, y, z]
+    try:
+        values = tuple(scale)
+    except TypeError:
+        values = (scale, scale, scale)
+
+    if len(values) != 3 or any(v <= 0 for v in values):
+        raise ValueError(f'"{name}" needs a number above 0 or 3 of them, got {scale}')
+
+    return values
+
 class World:
     def __init__(self, seed, tile_size, atlas_size):
         self.seed = seed
@@ -59,9 +71,6 @@ class World:
     def set_block(self, x, y, z, block_type):
         self.blocks[(x, y, z)] = block_type
         self.dirty = True # mark the mesh as outdated since we've modified the world
-
-    def get_block(self, x, y, z):
-        return self.blocks.get((x, y, z), None)
 
     def has_geometry(self, block_type):
         # whether a block type has geometry ("AIR" and unknown types don't)
@@ -195,85 +204,97 @@ class World:
                     self.set_block(x, y, z, self.pick_block_type(blocks))
 
     def fill_cube_centered(self, cx, cy, cz, size, blocks):
-        half = size // 2
-        self.fill_cube(cx - half, cx + half, cy - half, cy + half, cz - half, cz + half, blocks)
+        # a cube given by its middle and its size instead of its 6 edges
+        # size can be one number (a cube) or [x, y, z] (a box); a size of n covers exactly n blocks, so 5 is centered on the block (cx, cy, cz) and 4 starts 2 blocks before it
+        sx, sy, sz = unpack_scale(size, 'size')
+        x_min = cx - int(sx) // 2
+        y_min = cy - int(sy) // 2
+        z_min = cz - int(sz) // 2
+        self.fill_cube(x_min, x_min + int(sx), y_min, y_min + int(sy), z_min, z_min + int(sz), blocks)
 
-    def fill_sphere(self, cx, cy, cz, radius, blocks):
+    def fill_sphere(self, cx, cy, cz, radius, blocks, scale=1):
+        # scale: stretches the sphere along x, y, z; one number for all 3 or [x, y, z] (so [2, 1, 1] is an ellipsoid twice as wide in x)
+        sx, sy, sz = unpack_scale(scale)
         r_sqr = radius * radius
 
-        for x in range(int(cx - radius), int(cx + radius)):
-            for y in range(int(cy - radius), int(cy + radius)):
-                for z in range(int(cz - radius), int(cz + radius)):
-                    dx = x - cx
-                    dy = y - cy
-                    dz = z - cz
+        for x in range(int(cx - radius * sx), int(cx + radius * sx)):
+            for y in range(int(cy - radius * sy), int(cy + radius * sy)):
+                for z in range(int(cz - radius * sz), int(cz + radius * sz)):
+                    dx = (x - cx) / sx
+                    dy = (y - cy) / sy
+                    dz = (z - cz) / sz
                     if dx * dx + dy * dy + dz * dz < r_sqr:
                         self.set_block(x, y, z, self.pick_block_type(blocks))
 
-    def fill_cylinder(self, cx, cy, cz, radius, height, axis, blocks):
+    def fill_cylinder(self, cx, cy, cz, radius, height, axis, blocks, scale=1):
         # axis: "y" = vertical, "x" = horizontal along x, "z" = horizontal along z
-
+        # scale: stretches the cylinder along x, y, z; one number for all 3 or [x, y, z] (the stretch along the axis makes it longer, the other two make the circle an ellipse)
+        sx, sy, sz = unpack_scale(scale)
         r_sqr = radius * radius
 
         if axis == "y": # vertical
-            for x in range(int(cx - radius), int(cx + radius)):
-                for y in range(int(cy), int(cy + height)):
-                    for z in range(int(cz - radius), int(cz + radius)):
-                        dx = x - cx
-                        dz = z - cz
+            for x in range(int(cx - radius * sx), int(cx + radius * sx)):
+                for y in range(int(cy), int(cy + height * sy)):
+                    for z in range(int(cz - radius * sz), int(cz + radius * sz)):
+                        dx = (x - cx) / sx
+                        dz = (z - cz) / sz
                         if dx * dx + dz * dz < r_sqr:
                             self.set_block(x, y, z, self.pick_block_type(blocks))
         elif axis == "x": # horizontal along x
-            for x in range(int(cx), int(cx + height)):
-                for y in range(int(cy - radius), int(cy + radius)):
-                    for z in range(int(cz - radius), int(cz + radius)):
-                        dy = y - cy
-                        dz = z - cz
+            for x in range(int(cx), int(cx + height * sx)):
+                for y in range(int(cy - radius * sy), int(cy + radius * sy)):
+                    for z in range(int(cz - radius * sz), int(cz + radius * sz)):
+                        dy = (y - cy) / sy
+                        dz = (z - cz) / sz
                         if dy * dy + dz * dz < r_sqr:
                             self.set_block(x, y, z, self.pick_block_type(blocks))
         elif axis == "z": # horizontal along z
-            for x in range(int(cx - radius), int(cx + radius)):
-                for y in range(int(cy - radius), int(cy + radius)):
-                    for z in range(int(cz), int(cz + height)):
-                        dx = x - cx
-                        dy = y - cy
+            for x in range(int(cx - radius * sx), int(cx + radius * sx)):
+                for y in range(int(cy - radius * sy), int(cy + radius * sy)):
+                    for z in range(int(cz), int(cz + height * sz)):
+                        dx = (x - cx) / sx
+                        dy = (y - cy) / sy
                         if dx * dx + dy * dy < r_sqr:
                             self.set_block(x, y, z, self.pick_block_type(blocks))
 
-    def fill_cone(self, cx, cy, cz, radius, height, axis, flip, blocks):
+    def fill_cone(self, cx, cy, cz, radius, height, axis, flip, blocks, scale=1):
         # axis: "y" = vertical, "x" = horizontal along x, "z" = horizontal along z
         # flip: True or False; whether the cone is flipped (pointing down/left/back instead of up/right/front)
-
+        # scale: stretches the cone along x, y, z; one number for all 3 or [x, y, z] (the stretch along the axis makes it longer, the other two make the circle an ellipse)
+        sx, sy, sz = unpack_scale(scale)
         r_sqr = radius * radius
 
         if axis == "y": # vertical
-            for x in range(int(cx - radius), int(cx + radius)):
-                for y in range(int(cy), int(cy + height)):
-                    for z in range(int(cz - radius), int(cz + radius)):
+            length = height * sy
+            for x in range(int(cx - radius * sx), int(cx + radius * sx)):
+                for y in range(int(cy), int(cy + length)):
+                    for z in range(int(cz - radius * sz), int(cz + radius * sz)):
                         dy = y - cy
-                        dx = x - cx
-                        dz = z - cz
-                        t = (dy / height) if flip else 1.0 - (dy / height)
+                        dx = (x - cx) / sx
+                        dz = (z - cz) / sz
+                        t = (dy / length) if flip else 1.0 - (dy / length)
                         if dy >= 0 and dx * dx + dz * dz < r_sqr * t * t:
                             self.set_block(x, y, z, self.pick_block_type(blocks))
         elif axis == "x": # horizontal along x
-            for x in range(int(cx), int(cx + height)):
-                for y in range(int(cy - radius), int(cy + radius)):
-                    for z in range(int(cz - radius), int(cz + radius)):
+            length = height * sx
+            for x in range(int(cx), int(cx + length)):
+                for y in range(int(cy - radius * sy), int(cy + radius * sy)):
+                    for z in range(int(cz - radius * sz), int(cz + radius * sz)):
                         dx = x - cx
-                        dy = y - cy
-                        dz = z - cz
-                        t = (dx / height) if flip else 1.0 - (dx / height)
+                        dy = (y - cy) / sy
+                        dz = (z - cz) / sz
+                        t = (dx / length) if flip else 1.0 - (dx / length)
                         if dx >= 0 and dy * dy + dz * dz < r_sqr * t * t:
                             self.set_block(x, y, z, self.pick_block_type(blocks))
         elif axis == "z": # horizontal along z
-            for x in range(int(cx - radius), int(cx + radius)):
-                for y in range(int(cy - radius), int(cy + radius)):
-                    for z in range(int(cz), int(cz + height)):
+            length = height * sz
+            for x in range(int(cx - radius * sx), int(cx + radius * sx)):
+                for y in range(int(cy - radius * sy), int(cy + radius * sy)):
+                    for z in range(int(cz), int(cz + length)):
                         dz = z - cz
-                        dx = x - cx
-                        dy = y - cy
-                        t = (dz / height) if flip else 1.0 - (dz / height)
+                        dx = (x - cx) / sx
+                        dy = (y - cy) / sy
+                        t = (dz / length) if flip else 1.0 - (dz / length)
                         if dz >= 0 and dx * dx + dy * dy < r_sqr * t * t:
                             self.set_block(x, y, z, self.pick_block_type(blocks))
 
@@ -310,6 +331,8 @@ class World:
             self.fill_cone(x, y + ((h * 3) // 8), z, h // 4, h // 3, "y", False, {"LEAF_REDWOOD": 1, "AIR": 3})
             self.fill_cylinder(x, y, z, w, h - 1, "y", ["LOG_REDWOOD"]) # trunk h-1 blocks
             self.add_voxel(x, y + h - 1, z, ["LOG_REDWOOD_FULL"]) # tip at top, total height h
+        elif tree_type == "WINDSWEPT":
+            pass # placeholder: the LOG_WINDSWEPT / LOG_WINDSWEPT_FULL / LOG_WINDSWEPT_NAKED / LEAF_WINDSWEPT blocks exist, the tree itself isn't written yet
 
     def add_forest(self, x, y, z, radius, height_avg, height_err, density, shape, tree_type):
         # example function call: add_forest(0, 0, 0, 16, 20, 4, 0.25, "circle", "PINE")
@@ -346,27 +369,34 @@ class World:
         for voxel in world_data.get('voxels', []):
             self.add_voxel(voxel['x'], voxel['y'], voxel['z'], voxel['blocks'])
 
+        # a cube is either its 6 edges (x_min ... z_max) or its middle and size (x, y, z, size)
         for cube in world_data.get('cubes', []):
-            self.fill_cube(
-                cube['x_min'], cube['x_max'],
-                cube['y_min'], cube['y_max'],
-                cube['z_min'], cube['z_max'],
-                cube['blocks']
-            )
+            if 'size' in cube:
+                self.fill_cube_centered(
+                    cube['x'], cube['y'], cube['z'], cube['size'], cube['blocks']
+                )
+            else:
+                self.fill_cube(
+                    cube['x_min'], cube['x_max'],
+                    cube['y_min'], cube['y_max'],
+                    cube['z_min'], cube['z_max'],
+                    cube['blocks']
+                )
 
+        # spheres, cylinders and cones can have a "scale" to stretch them
         for sphere in world_data.get('spheres', []):
             self.fill_sphere(
-                sphere['x'], sphere['y'], sphere['z'], sphere['radius'], sphere['blocks']
+                sphere['x'], sphere['y'], sphere['z'], sphere['radius'], sphere['blocks'], sphere.get('scale', 1)
             )
 
         for cylinder in world_data.get('cylinders', []):
             self.fill_cylinder(
-                cylinder['x'], cylinder['y'], cylinder['z'], cylinder['radius'], cylinder['height'], cylinder['axis'], cylinder['blocks']
+                cylinder['x'], cylinder['y'], cylinder['z'], cylinder['radius'], cylinder['height'], cylinder['axis'], cylinder['blocks'], cylinder.get('scale', 1)
             )
 
         for cone in world_data.get('cones', []):
             self.fill_cone(
-                cone['x'], cone['y'], cone['z'], cone['radius'], cone['height'], cone['axis'], cone['flip'], cone['blocks']
+                cone['x'], cone['y'], cone['z'], cone['radius'], cone['height'], cone['axis'], cone['flip'], cone['blocks'], cone.get('scale', 1)
             )
 
         for tree in world_data.get('trees', []):

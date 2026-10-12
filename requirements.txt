@@ -1,4 +1,4 @@
 pygame
 PyOpenGL
 numpy
-opencv-python
+python-dotenv

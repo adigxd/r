@@ -17,9 +17,3 @@ def debug(title, **fields):
 
 def error(title, **fields):
     _emit('ERR', title, fields)
-
-def config(title, **fields):
-    _emit('CFG', title, fields)
-
-def thread(title, **fields):
-    _emit('THD', title, fields)

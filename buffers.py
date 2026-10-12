@@ -2,6 +2,9 @@ import ctypes
 import numpy as np
 from OpenGL.GL import *
 
+# ./
+import log
+
 # Creates and returns OpenGL buffers for a fullscreen quad used in post-processing effects.
 # The function sets up vertex and element buffers for a quad covering the entire screen,
 # with appropriate position and texture coordinate attributes for use in shaders.
@@ -46,36 +49,6 @@ def make_post_quad():
 
     return vao, vbo, ebo
 
-def make_textured_mesh(vertex_data, index_data):
-    vao = glGenVertexArrays(1) # VAO stores the state of vertex attribute pointers and buffer bindings
-    glBindVertexArray(vao)
-
-    vbo = glGenBuffers(1) # VBO stores vertex data (positions, colors, etc.)
-    glBindBuffer(GL_ARRAY_BUFFER, vbo)
-    glBufferData(GL_ARRAY_BUFFER, vertex_data.nbytes, vertex_data, GL_STATIC_DRAW)
-
-    ebo = glGenBuffers(1) # EBO (or IBO) stores indices for indexed drawing (which vertices to draw)
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo)
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_data.nbytes, index_data, GL_STATIC_DRAW)
-
-    # Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * vertex_data.itemsize, None)
-    glEnableVertexAttribArray(0)
-
-    # Texture coordinate attribute
-    # The vertex data is interleaved (position followed by texture coords), so the stride is 5 * sizeof(float) (3 for position + 2 for texture coords)
-    # 2 for texture because we have 2 texture coordinates (u, v); the offset for texture coordinates is 3 * sizeof(float) because the first 3 floats are for position
-    # u is the horizontal texture coordinate, v is the vertical texture coordinate
-    # the texture coordinates are used in the shader to sample from a texture, which is essential for post-processing effects where we render to a texture and then sample from it
-    # in simple words: the position attribute tells the shader where to draw the vertices on the screen, while the texture coordinate attribute tells the shader how to map a texture onto those vertices
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * vertex_data.itemsize,
-                         ctypes.c_void_p(3 * vertex_data.itemsize))
-    glEnableVertexAttribArray(1)
-
-    glBindVertexArray(0) # Unbind VAO to prevent accidental modifications
-
-    return vao, vbo, ebo
-
 def make_block_mesh(vertex_data):
     # Buffer for cube mesh data (position + normal + uv)
     # Vertex format: 8 floats per vertex (x, y, z, nx, ny, nz, u, v)
@@ -108,3 +81,41 @@ def make_block_mesh(vertex_data):
     glBindVertexArray(0)
 
     return vao, vbo
+
+def make_framebuffer(width, height):
+    # frame buffer for post-processing: the scene is drawn into this instead of the screen, then a post-processing shader draws it to the screen
+    # returns (fbo, texture, rbo), or None if the frame buffer can't be used; has to be made again whenever the window size changes
+    fbo = glGenFramebuffers(1)
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo)
+
+    # create texture to render to
+    texture = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_2D, texture)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, None)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0)
+
+    # create renderbuffer for depth and stencil attachments
+    rbo = glGenRenderbuffers(1)
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo)
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height)
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo)
+
+    # check framebuffer status
+    complete = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0)
+
+    if not complete:
+        log.error('Framebuffer not complete', width=width, height=height)
+        delete_framebuffer(fbo, texture, rbo)
+
+        return None
+
+    return fbo, texture, rbo
+
+def delete_framebuffer(fbo, texture, rbo):
+    glDeleteFramebuffers(1, [fbo])
+    glDeleteTextures(1, [texture])
+    glDeleteRenderbuffers(1, [rbo])

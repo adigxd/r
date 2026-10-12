@@ -2,14 +2,9 @@ import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
 import argparse
-import math
-import numpy as np
-from multiprocessing import Process, Queue, Manager, freeze_support, set_start_method
 from OpenGL.GL import *
-from OpenGL.GLU import *
 import pygame
 from pygame.locals import *
-import random
 import time
 
 # ./
@@ -24,8 +19,8 @@ from world import World
 
 # ------
 
-def load_texture(path):
-    # this function loads an image file as a texture and returns the texture ID, width, and height; it uses pygame to load the image and convert it to a format suitable for OpenGL, then creates an OpenGL texture object and uploads the image data to it
+def load_texture(path, mipmaps, tile_size):
+    # this function loads an image file as a texture and returns the texture ID; it uses pygame to load the image and convert it to a format suitable for OpenGL, then creates an OpenGL texture object and uploads the image data to it
     try:
         img = pygame.image.load(path) # load the image file as a pygame surface
         img_data = pygame.image.tostring(img, 'RGBA', True) # convert the surface to a string of pixel data in RGBA format (the True argument flips the image vertically to match OpenGL's coordinate system)
@@ -34,45 +29,54 @@ def load_texture(path):
         texture = glGenTextures(1) # generate a new texture object and get its ID
         glBindTexture(GL_TEXTURE_2D, texture) # bind the texture object to the GL_TEXTURE_2D target, making it the current texture for subsequent texture operations
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data) # specify the texture image data for the currently bound texture object (the img_data string contains the pixel data for the image)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-        #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR) # set the texture minifying function to use linear filtering with mipmaps (this determines how the texture is sampled when it needs to be shrunk down)
-        #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR) # set the texture magnification function to use linear filtering (this determines how the texture is sampled when it needs to be enlarged)
-        glGenerateMipmap(GL_TEXTURE_2D) # generate mipmaps for the currently bound texture object (this creates smaller versions of the texture for use when the texture is viewed at a distance or at a small size)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST) # up close every texel stays a sharp square
 
-        return texture, width, height
+        if mipmaps:
+            # mipmaps are smaller versions of the texture (half the size, again half, ...) that get used when it is far away or small, which stops it from shimmering
+            # every tile is tile_size wide, so the smallest version that still keeps every tile apart from its neighbours is 1 texel per tile; going past that would blend neighbouring tiles together
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, tile_size.bit_length() - 1)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR) # sharp texels, with a smooth blend between two sizes of the texture
+            glGenerateMipmap(GL_TEXTURE_2D) # generate the smaller versions of the currently bound texture object
+        else:
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+
+        return texture
     except Exception as e:
         log.error('Texture load failed', path=path, error=e)
 
-        return None, None, None
+        return None
 
 # ------
 
 def main(map_name):
-    # all settings come from the map file ("config"), so it has to load before anything else starts
+    # all settings come from .env.pre / .env and the map file, so they have to load before anything else starts
     settings, world_data = config.load(map_name)
 
     if settings is None: # the reason has already been printed
         exit(1)
 
     wireframe = False # debug wireframe mode toggle
+    focus_grace_until = 0.0 # switching fullscreen makes the window lose and regain focus, which must not exit the game
 
     # pygame setup
-    resolution = (settings.width, settings.height)
+    width, height = settings.width, settings.height
     pygame.init()
     pygame.mixer.init(frequency=settings.mixer_frequency, size=settings.mixer_size, channels=settings.mixer_channels, buffer=settings.mixer_buffer)
     pygame.mixer.set_num_channels(2)
-    pygame.display.set_mode(resolution, DOUBLEBUF | OPENGL | pygame.FULLSCREEN)
+    pygame.display.set_mode((width, height), DOUBLEBUF | OPENGL | (pygame.FULLSCREEN if settings.fullscreen else 0))
     pygame.display.set_caption('r')
     pygame.display.set_icon(pygame.image.load('./resources/icon.png'))
 
-    # music setup
-    try:
-        pygame.mixer.music.load(settings.music_path)
-        pygame.mixer.music.set_volume(settings.music_volume)
-        pygame.mixer.music.play(-1)
-    except Exception as e:
-        log.error('Music load failed', path=settings.music_path, error=e)
+    # music setup (a map without "music" just has none)
+    if settings.music:
+        music_path = os.path.join(settings.music_dir, settings.music)
+
+        try:
+            pygame.mixer.music.load(music_path)
+            pygame.mixer.music.set_volume(settings.music_volume)
+            pygame.mixer.music.play(-1)
+        except Exception as e:
+            log.error('Music load failed', path=music_path, error=e)
 
     # opengl setup
     glEnable(GL_DEPTH_TEST)
@@ -86,38 +90,13 @@ def main(map_name):
     # ------
 
     # frame buffer setup for post-processing
-    fbo = glGenFramebuffers(1)
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo)
+    framebuffer = buffers.make_framebuffer(width, height)
 
-    # create texture to render to
-    fbo_texture = glGenTextures(1)
-    glBindTexture(GL_TEXTURE_2D, fbo_texture)
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, settings.width, settings.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, None)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo_texture, 0)
-
-    # create renderbuffer for depth and stencil attachments
-    rbo = glGenRenderbuffers(1)
-    glBindRenderbuffer(GL_RENDERBUFFER, rbo)
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, settings.width, settings.height)
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo)
-
-    # check framebuffer status
-    if glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE:
-        log.error('Framebuffer not complete')
+    if framebuffer is None: # the reason has already been printed
         pygame.quit()
         exit()
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0)
-
-    # ------
-
-    # perspective matrix setup
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    gluPerspective(settings.fov, settings.width / settings.height, settings.near_clip, settings.far_clip)
-    glMatrixMode(GL_MODELVIEW)
+    fbo, fbo_texture, rbo = framebuffer
 
     # ------
 
@@ -134,16 +113,12 @@ def main(map_name):
 
     # ------
 
-    # lighting setup
-    light_pos = settings.light_pos
-    light_radius = settings.light_radius
-    light_intensity = settings.light_intensity
-    light_color = settings.light_color
-
-    # ------
-
     # texture setup
-    atlas_id, atlas_width, atlas_height = load_texture(settings.atlas_path)
+    atlas_id = load_texture(settings.atlas_path, settings.mipmaps, settings.tile_size)
+
+    if atlas_id is None: # the reason has already been printed
+        pygame.quit()
+        exit()
 
     # block_vao: block vertex array object
     # block_vertex_count: block vertex count for rendering; these will be generated dynamically based on the chunks that are loaded, and will be used to render the blocks in the scene with the appropriate texture coordinates from the atlas
@@ -166,28 +141,23 @@ def main(map_name):
         exit()
 
     post_vertex_source = glsl.read_source(settings.post_vertex_shader)
-    post_fragment_sources = {
-        'default': glsl.read_source(settings.post_default_shader),
-        'edge': glsl.read_source(settings.post_edge_shader),
-        'dither': glsl.read_source(settings.post_dither_shader)
-    }
 
-    if not post_vertex_source or not any(post_fragment_sources.values()):
+    if not post_vertex_source:
         pygame.quit()
         exit()
 
-    post_programs = {
-        'default': glsl.build_program(post_vertex_source, post_fragment_sources['default']),
-        'edge': glsl.build_program(post_vertex_source, post_fragment_sources['edge']),
-        'dither': glsl.build_program(post_vertex_source, post_fragment_sources['dither'])
-    }
-
-    if not any(post_programs.values()):
-        pygame.quit()
-        exit()
-
-    post_effects = [effect for effect, program in post_programs.items() if program] # only cycle through effects that built
+    post_programs = [] # every post-processing shader that built, in the order they cycle
     post_index = 0
+
+    for path in settings.post_fragment_shaders:
+        post_program = glsl.build_program(post_vertex_source, glsl.read_source(path))
+
+        if post_program: # a shader that failed has already printed why, and just isn't in the cycle
+            post_programs.append(post_program)
+
+    if not post_programs:
+        pygame.quit()
+        exit()
 
     post_vao, post_vbo, post_ebo = buffers.make_post_quad() # post-processing buffer objects for full-screen quad
 
@@ -196,8 +166,7 @@ def main(map_name):
     # ------
 
     # matrices setup
-    aspect = settings.width / settings.height # aspect ratio for perspective matrix
-    projection = matrices.projection_matrix(settings.fov, aspect, settings.near_clip, settings.far_clip) # perspective projection matrix
+    projection = matrices.projection_matrix(settings.fov, width / height, settings.near_clip, settings.far_clip) # perspective projection matrix
     model = matrices.model_matrix() # use defaults for model matrix (no transformations)
 
     glLineWidth(settings.line_width) # set line width for wireframe rendering (if used)
@@ -210,26 +179,19 @@ def main(map_name):
     # but a lower frame rate to save resources
     clock = pygame.time.Clock() # clock for controlling frame rate
 
-    prev_pos = (None, None, None) # previous position for movement delta calculations
-
-    frame_count = 0
-
     while True:
-        frame_count += 1
-
         for event in pygame.event.get():
-            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_RSHIFT) or (event.type == pygame.ACTIVEEVENT and event.gain == 0):
+            focus_lost = event.type == pygame.ACTIVEEVENT and event.gain == 0 and time.time() > focus_grace_until
+
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_RSHIFT) or focus_lost:
                 # cleanup and exit
                 pygame.mixer.music.stop()
 
-                for post_program in post_programs.values():
-                    if post_program:
-                        glDeleteProgram(post_program)
+                for program in post_programs:
+                    glDeleteProgram(program)
 
                 glDeleteProgram(block_program)
-                glDeleteFramebuffers(1, [fbo])
-                glDeleteTextures(1, [fbo_texture])
-                glDeleteRenderbuffers(1, [rbo])
+                buffers.delete_framebuffer(fbo, fbo_texture, rbo)
                 glDeleteVertexArrays(1, [post_vao])
                 glDeleteBuffers(1, [post_vbo, post_ebo])
 
@@ -237,9 +199,30 @@ def main(map_name):
 
                 return
 
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                # switch between fullscreen and windowed; the window changes size, so everything that has the window's size has to be made again
+                # (OpenGL objects like textures, shaders and buffers survive the switch, only the frame buffer and the projection depend on the size)
+                focus_grace_until = time.time() + 1.0
+                pygame.display.toggle_fullscreen()
+                width, height = pygame.display.get_window_size() # get_surface() keeps reporting the old size
+
+                buffers.delete_framebuffer(fbo, fbo_texture, rbo)
+                framebuffer = buffers.make_framebuffer(width, height)
+
+                if framebuffer is None: # the reason has already been printed
+                    pygame.quit()
+                    exit()
+
+                fbo, fbo_texture, rbo = framebuffer
+                glViewport(0, 0, width, height)
+                projection = matrices.projection_matrix(settings.fov, width / height, settings.near_clip, settings.far_clip)
+
+                pygame.mouse.set_visible(False)
+                pygame.event.set_grab(True)
+
             if event.type == pygame.KEYDOWN and event.key == pygame.K_BACKSLASH:
                 # cycle through post-processing effects
-                post_index = (post_index + 1) % len(post_effects)
+                post_index = (post_index + 1) % len(post_programs)
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_BACKQUOTE:
                 # do it like this to ensure post-processing effects in frame buffer are captured
@@ -249,8 +232,8 @@ def main(map_name):
                 # are fully executed before you read the pixel data with glReadPixels()
 
                 glFinish() # wait for all OpenGL commands to complete
-                pixels = glReadPixels(0, 0, settings.width, settings.height, GL_RGBA, GL_UNSIGNED_BYTE) # read pixel data from the default framebuffer (the screen)
-                surface = pygame.image.frombuffer(pixels, resolution, 'RGBA') # create a pygame surface from the pixel data (surface is a 2D image that can be drawn on the screen)
+                pixels = glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE) # read pixel data from the default framebuffer (the screen)
+                surface = pygame.image.frombuffer(pixels, (width, height), 'RGBA') # create a pygame surface from the pixel data (surface is a 2D image that can be drawn on the screen)
                 surface = pygame.transform.flip(surface, False, True) # flip the surface vertically (OpenGL's origin is bottom-left, while Pygame's is top-left)
 
                 screenshot_path = os.path.join(settings.screenshot_dir, f'{int(time.time())}.png') # create a unique file path for the screenshot using the current timestamp
@@ -279,21 +262,6 @@ def main(map_name):
 
         camera.update(keys, mouse_rel, dt) # update camera position and rotation based on input
 
-        # update light position
-        light_pos = camera.pos
-
-        # snap light position
-        light_pos_snapped = [
-            math.floor(camera.pos[0]) + 0.5,
-            math.floor(camera.pos[1]) + 0.5,
-            math.floor(camera.pos[2]) + 0.5
-        ]
-
-        #if frame_count % 256 == 0:
-        #    log.debug('camera', pos=camera.pos, rot=camera.rot)
-
-        # camera.apply_transform() # look
-
         glBindFramebuffer(GL_FRAMEBUFFER, fbo) # bind the frame buffer object for off-screen rendering
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) # clear the color and depth buffers for the new frame
 
@@ -305,7 +273,7 @@ def main(map_name):
         view = matrices.view_matrix(camera.pos, camera.rot) # generate the view matrix based on the camera's position and rotation
 
         uniforms.set_matrices(block_program, model, view, projection) # set the uniform variables for the main shader program (model, view, projection matrices)
-        uniforms.set_scene(block_program, atlas_id, light_pos_snapped, light_radius, light_intensity, light_color) # set other uniform variables (e.g. textures)
+        uniforms.set_scene(block_program, atlas_id, settings.lights, settings.lighting, camera.pos) # set other uniform variables (e.g. textures, lights)
 
         block_vao, block_vertex_count = world.get_mesh() # get the vertex array object and vertex count for rendering the blocks in the scene; this will be updated dynamically based on the chunks that are loaded and the blocks they contain, allowing for efficient rendering of only the visible blocks with the appropriate texture coordinates from the atlas
 
@@ -321,7 +289,7 @@ def main(map_name):
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        post_program = post_programs[post_effects[post_index]]
+        post_program = post_programs[post_index]
 
         glUseProgram(post_program)
         glDisable(GL_DEPTH_TEST) # disable depth testing for post-processing effects
@@ -329,7 +297,7 @@ def main(map_name):
         # Bind the FBO texture
         glActiveTexture(GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_2D, fbo_texture)
-        uniforms.set_post(post_program, 0, (settings.width, settings.height))
+        uniforms.set_post(post_program, 0, (width, height))
 
         # Draw the fullscreen quad
         glBindVertexArray(post_vao)
@@ -341,7 +309,7 @@ def main(map_name):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='r')
-    parser.add_argument('map', nargs='?', default='1', help='map file in maps/, with or without .json; it also holds all settings (default: 1)')
+    parser.add_argument('map', nargs='?', default='1', help='map file in maps/, with or without .json; it also holds this map\'s settings (default: 1)')
     args = parser.parse_args()
 
     main(args.map)

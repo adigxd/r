@@ -1,4 +1,5 @@
 git.py
+.env
 
 .DS_Store
 Thumbs.db

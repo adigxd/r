@@ -1,3 +1,14 @@
+### VER-1.4-20261011211155
+- `.env.pre` (tracked defaults) and an optional `.env` (yours, overrides `.env.pre`, not tracked) are back, for settings that are the same for every map: window, fullscreen, fps cap, view distance (`NEAR_CLIP` / `FAR_CLIP`), mouse sensitivity, mipmaps, texture atlas, shader files (`POST_FRAGMENT_SHADERS` is the list of post-processing shaders, in cycling order), audio and paths; map files keep what belongs to a map; unknown or wrong settings in either are reported
+- Fullscreen can be toggled with F11 at any time (the frame buffer and projection are rebuilt for the new window size; the exit-on-focus-loss no longer triggers on the focus change a toggle causes); `FULLSCREEN` in `.env.pre` is the start state
+- Lights: a map has `lights`, a list of 0 to 16 lights with their own `pos` / `follow_player`, `radius`, `intensity`, `color`, `falloff` (`linear` / `inverse_square`), `falloff_scale`, `snap` and `diffuse`; `lighting` holds ambient, `ambient_color`, `brightness`, `per_block` and `face_shade` per side; a map with the old single player-following light renders exactly like before
+- Music is optional per map (`config.music`, a file in `MUSIC_DIR`)
+- Mipmaps (`MIPMAPS`): far textures stop shimmering, near ones stay sharp; kept free of bleeding between neighbouring tiles
+- Shapes: spheres, cylinders and cones take a `scale` to stretch them; cubes can be given as `x`, `y`, `z`, `size` (the old unfinished centered cube works for every size now); `WINDSWEPT` trees are a placeholder
+- New dither (ordered Bayer dither, `post_dither.frag`); the old random one is `post_noise.frag`
+- Removed: unused imports / functions / variables, the `threads` setting, the `gluPerspective` setup, the `ramp_color` lighting function, `opencv-python`, the commented-out debug prints
+- Safety: a light exactly at the middle of the block being lit no longer normalizes a zero vector in the shader (undefined, could give garbage pixels)
+
 ### VER-1.3-20261011203308
 - Everything renamed to plain snake_case words (`blc_arr` -> `blocks`, `_CAM_SET` -> `update`, `__MAP__` -> `World`, ...); no behavior change (screenshots of 3 maps x all post-processing effects x wireframe are pixel-identical before / after)
 - Files: `cam.py` -> `camera.py`, `cfg.py` -> `config.py`, `dbg.py` -> `log.py`, `map_.py` -> `world.py`, `buf.py` -> `buffers.py`, `mat.py` -> `matrices.py`, `sha.py` -> `glsl.py`, `uni.py` -> `uniforms.py`, `req.txt` -> `requirements.txt`, `DIR-Changelog/README.md` -> `CHANGELOG.md`

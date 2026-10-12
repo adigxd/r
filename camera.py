@@ -1,10 +1,6 @@
 import math
-from OpenGL.GL import *
-import os
 import pygame
 
-# ./
-import log
 
 class Camera:
     def __init__(self, fly, jump_speed, gravity, width, height, pos, speed, sensitivity, rot=None, world=None):
@@ -23,12 +19,6 @@ class Camera:
 
     def set_speed(self, speed):
         self.speed = speed
-
-    def set_sensitivity(self, sensitivity):
-        self.sensitivity = sensitivity
-
-    def set_world(self, world):
-        self.world = world
 
     def set_pos(self, pos):
         self.vel_y = 0.0
@@ -81,7 +71,6 @@ class Camera:
         self.rot[0] = max(-89, min(89, self.rot[0]))
 
         # FORWARD AND RIGHT VECTORS
-        pitch = math.radians(self.rot[0])
         yaw = math.radians(self.rot[1])
 
         forward = [
@@ -149,15 +138,3 @@ class Camera:
                 self.grounded = False
             else:
                 self.grounded = False
-
-    def get(self):
-        return self.pos, self.rot
-
-    def apply_transform(self): # RENDER CAMERA TRANSFORMATIONS
-        # Clear transformation matrix
-        glLoadIdentity()
-
-        # Apply rotations first, then translation
-        glRotatef(-self.rot[0], 1, 0, 0)
-        glRotatef(-self.rot[1], 0, 1, 0)
-        glTranslatef(-self.pos[0], -self.pos[1], -self.pos[2])
