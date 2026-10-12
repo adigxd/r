@@ -1,3 +1,4 @@
+from array import array
 import numpy as np
 from OpenGL.GL import *
 import os
@@ -74,12 +75,35 @@ class __MAP__:
     def _BLC_GET(self, x, y, z):
         return self.blc_arr.get((x, y, z), None)
     
-    def _BLC_SEE_YES(self, x, y, z):
-        # check if a block has any exposed faces (not surrounded)
-        # for now, all blocks are visible (no occlusion culling)
+    def _BLC_TYP_YES(self, blc_typ):
+        # whether a block type has geometry ("AIR" and unknown types don't)
+        return blc_typ != 'AIR' and blc_typ in _BLC_TYP_ARR
 
-        return self._BLC_GET(x, y, z) is not None
-    
+    def _BLC_FAC_SEE(self, x, y, z):
+        # which faces of a block are exposed (not covered by a neighbouring block), in the order FNT, BAC, LFT, RGT, TOP, BOT
+        # only valid once "AIR" / invalid blocks have been purged from blc_arr (see _VTX_ARR_NEW)
+        blc_arr = self.blc_arr
+
+        return (
+            (x, y, z + 1) not in blc_arr,
+            (x, y, z - 1) not in blc_arr,
+            (x - 1, y, z) not in blc_arr,
+            (x + 1, y, z) not in blc_arr,
+            (x, y + 1, z) not in blc_arr,
+            (x, y - 1, z) not in blc_arr
+        )
+
+    def _BUF_DEL(self):
+        # free the GPU buffers from the previous build
+        if self.vao_blc is not None:
+            glDeleteVertexArrays(1, [self.vao_blc])
+        if self.vbo_blc is not None:
+            glDeleteBuffers(1, [self.vbo_blc])
+
+        self.vao_blc = None
+        self.vbo_blc = None
+        self.vtx_cnt_blc = 0
+
     def _TEX_RND(self, loc):
         # val can be a single (col, row) tuple or a list of tuples for random selection
         if isinstance(loc, list):
@@ -95,11 +119,9 @@ class __MAP__:
         
         return [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]
     
-    def _VTX_ARR_ADD(self, x, y, z, blc_typ):
-        # generate vertex data for a block at (x, y, z) of type blc_typ
-        if blc_typ == 'AIR' or blc_typ not in _BLC_TYP_ARR:
-            return []
-        
+    def _VTX_ARR_ADD(self, x, y, z, blc_typ, vtx_arr):
+        # append vertex data for the exposed faces of a block at (x, y, z) of type blc_typ to vtx_arr
+        # faces covered by a neighbouring block are skipped (they can never be seen)
         blc_map = _BLC_TYP_ARR[blc_typ]
         blc = {
             "FNT": blc_map.get("all", blc_map.get("sid")),
@@ -110,7 +132,7 @@ class __MAP__:
             "bot": blc_map.get("all", blc_map.get("bot"))
         }
 
-        vtx_arr = []
+        fac_see = self._BLC_FAC_SEE(x, y, z)
 
         blc_pos_fnt = [(x, y, z + 1), (x + 1, y, z + 1), (x + 1, y + 1, z + 1), (x, y + 1, z + 1)]
         blc_pos_bac = [(x + 1, y, z), (x, y, z), (x, y + 1, z), (x + 1, y + 1, z)]
@@ -118,13 +140,6 @@ class __MAP__:
         blc_pos_rgt = [(x + 1, y, z + 1), (x + 1, y, z), (x + 1, y + 1, z), (x + 1, y + 1, z + 1)]
         blc_pos_top = [(x, y + 1, z + 1), (x + 1, y + 1, z + 1), (x + 1, y + 1, z), (x, y + 1, z)]
         blc_pos_bot = [(x, y, z), (x + 1, y, z), (x + 1, y, z + 1), (x, y, z + 1)]
-
-        blc_tex_loc_fnt = self._TEX_RND(blc["FNT"])
-        blc_tex_loc_bac = self._TEX_RND(blc["BAC"])
-        blc_tex_loc_lft = self._TEX_RND(blc["LFT"])
-        blc_tex_loc_rgt = self._TEX_RND(blc["RGT"])
-        blc_tex_loc_top = self._TEX_RND(blc["TOP"])
-        blc_tex_loc_bot = self._TEX_RND(blc["bot"])
 
         blc_fnt_nml = (0, 0, 1)
         blc_bac_nml = (0, 0, -1)
@@ -140,42 +155,40 @@ class __MAP__:
             for i in [0, 2, 3]:
                 vtx_arr.extend([*pos[i], *nml, *tex_loc[i]])
 
-        add_fac(blc_pos_fnt, blc_tex_loc_fnt, blc_fnt_nml)
-        add_fac(blc_pos_bac, blc_tex_loc_bac, blc_bac_nml)
-        add_fac(blc_pos_lft, blc_tex_loc_lft, blc_lft_nml)
-        add_fac(blc_pos_rgt, blc_tex_loc_rgt, blc_rgt_nml)
-        add_fac(blc_pos_top, blc_tex_loc_top, blc_top_nml)
-        add_fac(blc_pos_bot, blc_tex_loc_bot, blc_bot_nml)
-        
-        return vtx_arr
-    
+        if fac_see[0]:
+            add_fac(blc_pos_fnt, self._TEX_RND(blc["FNT"]), blc_fnt_nml)
+        if fac_see[1]:
+            add_fac(blc_pos_bac, self._TEX_RND(blc["BAC"]), blc_bac_nml)
+        if fac_see[2]:
+            add_fac(blc_pos_lft, self._TEX_RND(blc["LFT"]), blc_lft_nml)
+        if fac_see[3]:
+            add_fac(blc_pos_rgt, self._TEX_RND(blc["RGT"]), blc_rgt_nml)
+        if fac_see[4]:
+            add_fac(blc_pos_top, self._TEX_RND(blc["TOP"]), blc_top_nml)
+        if fac_see[5]:
+            add_fac(blc_pos_bot, self._TEX_RND(blc["bot"]), blc_bot_nml)
+
     def _VTX_ARR_NEW(self):
         # generate vertex data for the entire map
-        vtx_arr = []
-        vtx_del_arr = []
+        vtx_arr = array('f') # compact float32 storage (a plain list of floats would cost several times the memory)
+
+        # purge "AIR" / invalid blocks first so face culling only ever sees real neighbours
+        for key in [key for key, blc_typ in self.blc_arr.items() if not self._BLC_TYP_YES(blc_typ)]:
+            del self.blc_arr[key]
 
         for (x, y, z), blc_typ in self.blc_arr.items():
-            result = self._VTX_ARR_ADD(x, y, z, blc_typ)
-            if result:
-                vtx_arr.extend(result)
-            else:
-                vtx_del_arr.append((x, y, z))
+            self._VTX_ARR_ADD(x, y, z, blc_typ, vtx_arr)
 
-        for key in vtx_del_arr:
-            del self.blc_arr[key]
+        self._BUF_DEL() # free the previous buffers (otherwise they leak on every rebuild)
+        self.new = False # mark the map as clean since we've just updated the vertex data
 
         # don't try to draw if there's nothing to draw
         if not vtx_arr:
-            self.vao_blc = None
-            self.vbo_blc = None
-            self.vtx_cnt_blc = 0
-
             return
 
-        vtx_dat = np.array(vtx_arr, dtype=np.float32)
+        vtx_dat = np.frombuffer(vtx_arr, dtype=np.float32)
         self.vao_blc, self.vbo_blc = buf._BUF_BLC(vtx_dat)
         self.vtx_cnt_blc = len(vtx_arr) // 8 # 8 floats per vertex (position, normal, texcoord)
-        self.new = False # mark the map as clean since we've just updated the vertex data
     
     def _BLC_TYP_RND(self, blc_typ_arr):
         # blc_typ_arr can be a list (equal chance) or a dict {"TYPE": weight} for weighted selection

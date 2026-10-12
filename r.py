@@ -113,9 +113,12 @@ def main():
     pygame.display.set_icon(pygame.image.load('./DIR-Resources/IMG-WIN.png'))
 
     # music setup
-    pygame.mixer.music.load(_PTH_MSC)
-    pygame.mixer.music.set_volume(_MIX_VOL)
-    pygame.mixer.music.play(-1)
+    try:
+        pygame.mixer.music.load(_PTH_MSC)
+        pygame.mixer.music.set_volume(_MIX_VOL)
+        pygame.mixer.music.play(-1)
+    except Exception as E:
+        dbg._DBG(dbg._TAG_ERR, ['Music Error', 'Path', 'Error'], ['...', _PTH_MSC, E])
 
     # opengl setup
     glEnable(GL_DEPTH_TEST)
@@ -229,7 +232,7 @@ def main():
         pygame.quit()
         exit()
 
-    pro_sha_pst_typ_arr = list(pro_sha_pst_dct.keys())
+    pro_sha_pst_typ_arr = [typ for typ, pro in pro_sha_pst_dct.items() if pro] # only cycle through effects that built
     pro_sha_pst_typ_idx = 0
 
     vao_pst, vbo_pst, ebo_pst = buf._BUF_PST() # post-processing buffer objects for full-screen quad
@@ -266,7 +269,8 @@ def main():
                 pygame.mixer.music.stop()
 
                 for pro_sha_pst in pro_sha_pst_dct.values():
-                    glDeleteProgram(pro_sha_pst)
+                    if pro_sha_pst:
+                        glDeleteProgram(pro_sha_pst)
 
                 glDeleteProgram(pro_sha)
                 glDeleteFramebuffers(1, [fbo])
@@ -340,6 +344,9 @@ def main():
         glBindFramebuffer(GL_FRAMEBUFFER, fbo) # bind the frame buffer object for off-screen rendering
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) # clear the color and depth buffers for the new frame
 
+        # wireframe only applies to the scene; it has to be set before the scene is drawn (and undone before the post-processing quad, or the quad itself gets drawn as lines)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE if dbg_see else GL_FILL) # wireframe makes blocks look like lines, which is useful for debugging; toggle with Right Ctrl
+
         glUseProgram(pro_sha) # use the main shader program for rendering the scene
 
         mat_v = mat._GEN_MAT_V(cam.pos, cam.rot) # generate the view matrix based on the camera's position and rotation
@@ -355,10 +362,7 @@ def main():
              # future: switch to indexed drawing with glDrawElements and an element buffer object (EBO) for better performance and memory efficiency when rendering complex scenes with many blocks
              # switch to glDrawElements when using an EBO: glDrawElements(GL_TRIANGLES, idx_cnt_blc, GL_UNSIGNED_INT, None) where idx_cnt_blc is the count of indices in the EBO for rendering the blocks
 
-        if dbg_see:
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE) # this makes blocks look like wireframes, which is useful for debugging; you can toggle this with the DBG_SEE environment variable
-        else:
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL) # this makes blocks look like they are solid, which is the default rendering mode
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL) # post-processing quad is always solid
 
         # Post-processing pass
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
