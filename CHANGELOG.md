@@ -1,3 +1,10 @@
+### VER-1.5-20261014192903
+- Transparent blocks, per block and automatic: `atlas.py` reads the alpha of every tile of `atlas.png`; cutout tiles (every pixel solid or gone, like leaves) have their gone pixels cut out, translucent tiles (partly see-through, like glass) are drawn in a second pass with blending, sorted far to near (re-sorted whenever the camera moves half a block); a face is only hidden by a fully solid neighbour or by the same translucent block, and the frame's alpha stays 255 so screenshots don't get see-through spots; none of the blocks that exist today are see-through, so every existing scene renders exactly as before
+- Fullscreen is a borderless window as big as the screen (the screen's own resolution, no video-mode switch, no black flicker) at startup and on F11; `WIDTH` / `HEIGHT` in `.env.pre` are only the windowed size, kept between 1280x720 and 3840x2160 (default is now 1280x720)
+- Maple trees have their leaves again (the commented-out cube + sphere of `LEAF_MAPLE`)
+- `maps/lights.json`: an example map with five different lights
+- Removed the note about indexed drawing (skipped)
+
 ### VER-1.4-20261011211155
 - `.env.pre` (tracked defaults) and an optional `.env` (yours, overrides `.env.pre`, not tracked) are back, for settings that are the same for every map: window, fullscreen, fps cap, view distance (`NEAR_CLIP` / `FAR_CLIP`), mouse sensitivity, mipmaps, texture atlas, shader files (`POST_FRAGMENT_SHADERS` is the list of post-processing shaders, in cycling order), audio and paths; map files keep what belongs to a map; unknown or wrong settings in either are reported
 - Fullscreen can be toggled with F11 at any time (the frame buffer and projection are rebuilt for the new window size; the exit-on-focus-loss no longer triggers on the focus change a toggle causes); `FULLSCREEN` in `.env.pre` is the start state

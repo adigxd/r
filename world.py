@@ -4,6 +4,7 @@ from OpenGL.GL import *
 import random
 
 # ./
+from atlas import OPAQUE, TRANSLUCENT
 import buffers
 
 # format: "BLOCK_NAME": {"top": (col, row), "side": (col, row), "bottom": (col, row)} or {"all": (col, row)} (if all faces of the block use the same texture)
@@ -58,7 +59,8 @@ def unpack_scale(scale, name='scale'):
     return values
 
 class World:
-    def __init__(self, seed, tile_size, atlas_size):
+    def __init__(self, seed, tile_size, atlas_size, tile_opacity=None):
+        # tile_opacity: {(col, row): OPAQUE / CUTOUT / TRANSLUCENT} of the tiles of the atlas (see atlas.py); a tile that isn't in it is opaque
         self.seed = seed
         self.tile_size = tile_size
         self.atlas_size = atlas_size
@@ -68,6 +70,25 @@ class World:
         self.vbo = None
         self.vertex_count = 0
 
+        # how see-through every block type is: the most see-through of its tiles
+        tile_opacity = tile_opacity or {}
+        self.opacity = {}
+
+        for name, spec in BLOCK_TYPES.items():
+            tiles = [tile for tile_spec in spec.values() for tile in (tile_spec if isinstance(tile_spec, list) else [tile_spec])]
+            self.opacity[name] = max(tile_opacity.get(tile, OPAQUE) for tile in tiles)
+
+        self.opaque_types = {name for name, opacity in self.opacity.items() if opacity == OPAQUE}
+        self.see_through = len(self.opaque_types) != len(self.opacity) # false: every block hides whatever is behind it, which makes building the mesh a lot simpler and faster
+
+        # the translucent blocks are a mesh of their own, drawn after everything else and sorted from far to near (see get_translucent_mesh)
+        self.t_vao = None
+        self.t_vbo = None
+        self.t_vertex_count = 0
+        self.t_faces = None # one row per face: its 6 vertices of 8 floats
+        self.t_centers = None # the middle of every face
+        self.t_sorted_for = None # where the camera was when the faces were last sorted
+
     def set_block(self, x, y, z, block_type):
         self.blocks[(x, y, z)] = block_type
         self.dirty = True # mark the mesh as outdated since we've modified the world
@@ -76,18 +97,38 @@ class World:
         # whether a block type has geometry ("AIR" and unknown types don't)
         return block_type != 'AIR' and block_type in BLOCK_TYPES
 
-    def exposed_faces(self, x, y, z):
+    def exposed_faces(self, x, y, z, block_type):
         # which faces of a block are exposed (not covered by a neighbouring block), in the order front, back, left, right, top, bottom
         # only valid once "AIR" / invalid blocks have been purged from self.blocks (see rebuild_mesh)
         blocks = self.blocks
 
+        if not self.see_through:
+            return (
+                (x, y, z + 1) not in blocks,
+                (x, y, z - 1) not in blocks,
+                (x - 1, y, z) not in blocks,
+                (x + 1, y, z) not in blocks,
+                (x, y + 1, z) not in blocks,
+                (x, y - 1, z) not in blocks
+            )
+
+        # a face is only hidden by a neighbour that is fully opaque, or by the same translucent block (glass next to glass has no wall in between)
+        # leaves next to leaves keep their faces: you see through the holes of the first one into the second
+        opaque = self.opaque_types
+        same_glass = block_type if self.opacity[block_type] == TRANSLUCENT else None
+
+        def open_to(pos):
+            other = blocks.get(pos)
+
+            return other is None or (other not in opaque and other != same_glass)
+
         return (
-            (x, y, z + 1) not in blocks,
-            (x, y, z - 1) not in blocks,
-            (x - 1, y, z) not in blocks,
-            (x + 1, y, z) not in blocks,
-            (x, y + 1, z) not in blocks,
-            (x, y - 1, z) not in blocks
+            open_to((x, y, z + 1)),
+            open_to((x, y, z - 1)),
+            open_to((x - 1, y, z)),
+            open_to((x + 1, y, z)),
+            open_to((x, y + 1, z)),
+            open_to((x, y - 1, z))
         )
 
     def free_buffers(self):
@@ -96,10 +137,20 @@ class World:
             glDeleteVertexArrays(1, [self.vao])
         if self.vbo is not None:
             glDeleteBuffers(1, [self.vbo])
+        if self.t_vao is not None:
+            glDeleteVertexArrays(1, [self.t_vao])
+        if self.t_vbo is not None:
+            glDeleteBuffers(1, [self.t_vbo])
 
         self.vao = None
         self.vbo = None
         self.vertex_count = 0
+        self.t_vao = None
+        self.t_vbo = None
+        self.t_vertex_count = 0
+        self.t_faces = None
+        self.t_centers = None
+        self.t_sorted_for = None
 
     def pick_uvs(self, tile):
         # tile can be a single (col, row) tuple or a list of tuples for random selection
@@ -116,9 +167,14 @@ class World:
 
         return [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]
 
-    def add_block_faces(self, x, y, z, block_type, vertices):
-        # append vertex data for the exposed faces of a block at (x, y, z) of type block_type to vertices
+    def add_block_faces(self, x, y, z, block_type, vertices, t_vertices, t_centers):
+        # append vertex data for the exposed faces of a block at (x, y, z) of type block_type to vertices (or to t_vertices, with the middle of every face in t_centers, if the block is translucent)
         # faces covered by a neighbouring block are skipped (they can never be seen)
+        translucent = self.opacity[block_type] == TRANSLUCENT
+
+        if translucent:
+            vertices = t_vertices
+
         spec = BLOCK_TYPES[block_type]
         tiles = {
             "front": spec.get("all", spec.get("side")),
@@ -129,7 +185,7 @@ class World:
             "bottom": spec.get("all", spec.get("bottom"))
         }
 
-        exposed = self.exposed_faces(x, y, z)
+        exposed = self.exposed_faces(x, y, z, block_type)
 
         pos_front = [(x, y, z + 1), (x + 1, y, z + 1), (x + 1, y + 1, z + 1), (x, y + 1, z + 1)]
         pos_back = [(x + 1, y, z), (x, y, z), (x, y + 1, z), (x + 1, y + 1, z)]
@@ -152,6 +208,9 @@ class World:
             for i in [0, 2, 3]:
                 vertices.extend([*pos[i], *normal, *uvs[i]])
 
+            if translucent:
+                t_centers.extend([sum(p[0] for p in pos) / 4, sum(p[1] for p in pos) / 4, sum(p[2] for p in pos) / 4])
+
         if exposed[0]:
             add_face(pos_front, self.pick_uvs(tiles["front"]), normal_front)
         if exposed[1]:
@@ -168,24 +227,30 @@ class World:
     def rebuild_mesh(self):
         # generate vertex data for the entire world
         vertices = array('f') # compact float32 storage (a plain list of floats would cost several times the memory)
+        t_vertices = array('f') # the same for the translucent blocks
+        t_centers = array('f')
 
         # purge "AIR" / invalid blocks first so face culling only ever sees real neighbours
         for key in [key for key, block_type in self.blocks.items() if not self.has_geometry(block_type)]:
             del self.blocks[key]
 
         for (x, y, z), block_type in self.blocks.items():
-            self.add_block_faces(x, y, z, block_type, vertices)
+            self.add_block_faces(x, y, z, block_type, vertices, t_vertices, t_centers)
 
         self.free_buffers() # free the previous buffers (otherwise they leak on every rebuild)
         self.dirty = False # mark the mesh as up to date since we've just updated the vertex data
 
         # don't try to draw if there's nothing to draw
-        if not vertices:
-            return
+        if vertices:
+            vertex_data = np.frombuffer(vertices, dtype=np.float32)
+            self.vao, self.vbo = buffers.make_block_mesh(vertex_data)
+            self.vertex_count = len(vertices) // 8 # 8 floats per vertex (position, normal, texcoord)
 
-        vertex_data = np.frombuffer(vertices, dtype=np.float32)
-        self.vao, self.vbo = buffers.make_block_mesh(vertex_data)
-        self.vertex_count = len(vertices) // 8 # 8 floats per vertex (position, normal, texcoord)
+        if t_vertices:
+            self.t_faces = np.frombuffer(t_vertices, dtype=np.float32).reshape(-1, 48) # 6 vertices of 8 floats per face
+            self.t_centers = np.frombuffer(t_centers, dtype=np.float32).reshape(-1, 3)
+            self.t_vao, self.t_vbo = buffers.make_block_mesh(self.t_faces.reshape(-1), dynamic=True)
+            self.t_vertex_count = len(t_vertices) // 8
 
     def pick_block_type(self, choices):
         # choices can be a list (equal chance) or a dict {"TYPE": weight} for weighted selection
@@ -303,8 +368,8 @@ class World:
             h = max(6, height) # minimum maple height of 6
             w = 1
 
-            #self.fill_cube_centered(x, y + h, z, (h * 3) // 4, {"LEAF_MAPLE": 1, "AIR": 4})
-            #self.fill_sphere(x, y + h, z, h // 2, {"LEAF_MAPLE": 1, "AIR": 1})
+            self.fill_cube_centered(x, y + h, z, (h * 3) // 4, {"LEAF_MAPLE": 1, "AIR": 4})
+            self.fill_sphere(x, y + h, z, h // 2, {"LEAF_MAPLE": 1, "AIR": 1})
             self.fill_cylinder(x, y, z, w, h - 1, "y", ["LOG_MAPLE"]) # trunk h-1 blocks
             self.add_voxel(x, y + h - 1, z, ["LOG_MAPLE_FULL"]) # tip at top, total height h
         elif tree_type == "PINE":
@@ -416,3 +481,20 @@ class World:
             self.rebuild_mesh()
 
         return self.vao, self.vertex_count
+
+    def get_translucent_mesh(self, camera_pos):
+        # the mesh of the translucent blocks (glass, water, ...); it has to be drawn after everything else, with blending on
+        # blending is only right when what is further away is drawn first, so the faces are sorted from far to near; that is redone whenever the camera has moved half a block or more since the last time
+        if self.dirty:
+            self.rebuild_mesh()
+
+        if self.t_vao is None:
+            return None, 0
+
+        if self.t_sorted_for is None or sum((a - b) ** 2 for a, b in zip(camera_pos, self.t_sorted_for)) > 0.25:
+            distance = ((self.t_centers - np.array(camera_pos, dtype=np.float32)) ** 2).sum(axis=1)
+            order = np.argsort(-distance, kind='stable') # biggest distance first
+            buffers.update_block_mesh(self.t_vbo, np.ascontiguousarray(self.t_faces[order]).reshape(-1))
+            self.t_sorted_for = tuple(camera_pos)
+
+        return self.t_vao, self.t_vertex_count

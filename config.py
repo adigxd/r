@@ -13,6 +13,10 @@ MAPS_DIR = './maps'
 # settings that are the same for every map; later files override earlier ones (.env.pre is the tracked default, .env is optional and only yours)
 ENV_FILES = ['./.env.pre', './.env']
 
+# the size of the window when it isn't fullscreen is kept between these (fullscreen ignores them: it uses the size of the screen)
+WINDOW_MIN = (1280, 720)
+WINDOW_MAX = (3840, 2160)
+
 # the shader has an array of this size (MAX_LIGHTS in shaders/block.frag), keep them in sync
 MAX_LIGHTS = 16
 
@@ -216,9 +220,17 @@ def load_env(errors):
         if os.path.exists(path):
             values.update({key: val for key, val in dotenv_values(path).items() if val is not None})
 
-    settings = parse(values, ENV_SETTINGS, {}, '', errors)
+    settings = {key.lower(): val for key, val in parse(values, ENV_SETTINGS, {}, '', errors).items()}
 
-    return {key.lower(): val for key, val in settings.items()}
+    if 'width' in settings and 'height' in settings:
+        size = (settings['width'], settings['height'])
+        settings['width'] = max(WINDOW_MIN[0], min(WINDOW_MAX[0], size[0]))
+        settings['height'] = max(WINDOW_MIN[1], min(WINDOW_MAX[1], size[1]))
+
+        if size != (settings['width'], settings['height']):
+            log.debug('Window size was outside the allowed range', asked=f'{size[0]}x{size[1]}', using=f"{settings['width']}x{settings['height']}", allowed=f'{WINDOW_MIN[0]}x{WINDOW_MIN[1]} to {WINDOW_MAX[0]}x{WINDOW_MAX[1]}')
+
+    return settings
 
 def load_map(map_path, errors):
     # returns (map settings, world data) of a map file

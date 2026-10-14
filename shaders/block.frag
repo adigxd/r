@@ -29,13 +29,31 @@ uniform float u_ambient;
 uniform vec3 u_ambient_color;
 uniform float u_brightness;
 uniform int u_per_block; // 1 = every block is lit from its middle, 0 = every pixel is lit separately
+uniform int u_translucent; // 0 = drawing opaque blocks and cutouts, 1 = drawing translucent blocks
 uniform float u_face_shade[6]; // top, bottom, front, back, left, right
 
 void main()
 {
 	// STEP 1: GRAB COLOR FROM TEXTURE
 
-	vec3 tex_color = texture(u_atlas, v_uv).rgb;
+	vec4 tex = texture(u_atlas, v_uv);
+
+	if (u_translucent == 0)
+	{
+		// cutout: a pixel is either there or not (the texture is smoothed at a distance, so "not" means less than half there)
+		if (tex.a < 0.5) discard;
+
+		// the smoothing also mixed in the black of the pixels that are gone, which made the ones that are left darker: undo that
+		if (tex.a < 0.999) tex.rgb /= tex.a;
+
+		tex.a = 1.0;
+	}
+	else if (tex.a <= 0.0)
+	{
+		discard; // nothing to blend
+	}
+
+	vec3 tex_color = tex.rgb;
 
 
 	// STEP 2: WHERE THE LIGHT IS MEASURED FROM
@@ -109,5 +127,5 @@ void main()
 
 	// STEP 6: OUTPUT COLOR
 
-	frag_color = vec4(tex_color * lit_color * face_shade, 1.0);
+	frag_color = vec4(tex_color * lit_color * face_shade, tex.a);
 }

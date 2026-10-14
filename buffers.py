@@ -49,7 +49,7 @@ def make_post_quad():
 
     return vao, vbo, ebo
 
-def make_block_mesh(vertex_data):
+def make_block_mesh(vertex_data, dynamic=False):
     # Buffer for cube mesh data (position + normal + uv)
     # Vertex format: 8 floats per vertex (x, y, z, nx, ny, nz, u, v)
     vao = glGenVertexArrays(1)
@@ -57,7 +57,7 @@ def make_block_mesh(vertex_data):
 
     vbo = glGenBuffers(1)
     glBindBuffer(GL_ARRAY_BUFFER, vbo)
-    glBufferData(GL_ARRAY_BUFFER, vertex_data.nbytes, vertex_data, GL_STATIC_DRAW)
+    glBufferData(GL_ARRAY_BUFFER, vertex_data.nbytes, vertex_data, GL_DYNAMIC_DRAW if dynamic else GL_STATIC_DRAW) # dynamic: the data gets replaced often (see update_block_mesh)
 
     stride = 8 * vertex_data.itemsize
 
@@ -81,6 +81,12 @@ def make_block_mesh(vertex_data):
     glBindVertexArray(0)
 
     return vao, vbo
+
+def update_block_mesh(vbo, vertex_data):
+    # replace the vertices of a mesh made with make_block_mesh (same amount, in a different order)
+    glBindBuffer(GL_ARRAY_BUFFER, vbo)
+    glBufferSubData(GL_ARRAY_BUFFER, 0, vertex_data.nbytes, vertex_data)
+    glBindBuffer(GL_ARRAY_BUFFER, 0)
 
 def make_framebuffer(width, height):
     # frame buffer for post-processing: the scene is drawn into this instead of the screen, then a post-processing shader draws it to the screen

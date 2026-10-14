@@ -33,10 +33,12 @@ python r.py [map]
 
 There are two places, depending on whether a setting belongs to *you* or to *a map*:
 
-- **`.env.pre`** has everything that is the same for every map (window size, fullscreen, fps cap, view distance, mouse sensitivity, mipmaps, texture atlas, shader files, audio, ...) with a comment on each line. To change something for yourself, add just that line to a file called `.env` (not tracked by git); it overrides `.env.pre`.
+- **`.env.pre`** has everything that is the same for every map (window size, fullscreen, fps cap, view distance, mouse sensitivity, mipmaps, texture atlas, shader files, audio, ...) with a comment on each line. It is always read, so the game runs with nothing else. To change something for yourself, make a file called `.env` (not tracked by git) with just the lines you want different, for example `WIDTH=1600` and `MUSIC_VOLUME=0.1`; any line in `.env` replaces the same line in `.env.pre`, and everything you leave out stays as in `.env.pre`. You never have to copy `.env.pre`.
 - **The map file** (`maps/<map>.json`) has everything that belongs to that map: `config` (seed, spawn, background, physics, speed, optional `music`), `lights`, `lighting` and `world` (the blocks). `config.py` lists every key and what it does.
 
 If a setting is missing or has a typo, the game says which one and exits.
+
+**Window and fullscreen:** `WIDTH` and `HEIGHT` are the size of the window when it isn't fullscreen (kept between 1280x720 and 3840x2160). Fullscreen ignores them: it is a borderless window as big as your screen, at your screen's own resolution, so the monitor never switches video mode (no black flicker). F11 switches at any time.
 
 ### Maps:
 
@@ -59,7 +61,7 @@ If a setting is missing or has a typo, the game says which one and exits.
 {"follow_player": true, "pos": [0, 1, 0], "radius": 16, "color": [0.5, 0.875, 1.0]}
 ```
 
-  `follow_player` makes `pos` an offset from the player, `snap` puts the light in the middle of its block, `diffuse` is how much the angle of a surface matters (0 to 1), `falloff` is `"linear"` or `"inverse_square"`.
+  `follow_player` makes `pos` an offset from the player, `snap` puts the light in the middle of its block, `diffuse` is how much the angle of a surface matters (0 to 1), `falloff` is `"linear"` or `"inverse_square"`. There are no shadows (light goes through walls), and a light inside a block doesn't light that block's own sides. `python r.py lights` is a map with five different lights to look at and fly around.
 - **`lighting`** is everything that isn't one light, all optional: `ambient`, `ambient_color`, `brightness`, `per_block` (light whole blocks or single pixels) and `face_shade` (how bright each side of a block is: `top`, `bottom`, `front`, `back`, `left`, `right`).
 - **`world`** has `voxels`, `cubes`, `spheres`, `cylinders`, `cones`, `trees` and `forests`; block names are in `world.py`.
   - A cube is either its edges (`x_min` ... `z_max`) or its middle and size (`x`, `y`, `z`, `size`; `size` can be one number or `[x, y, z]`).
@@ -70,6 +72,10 @@ If a setting is missing or has a typo, the game says which one and exits.
 - Create your own map in `maps` ... run it with `python r.py <map>`
 - Edit the textures in `resources/atlas.png`
 - A new block needs a spot in `world.py` (`BLOCK_TYPES`) that points at its tile(s) in the atlas
+- **Transparent blocks** need nothing but the picture: draw the tile in `atlas.png` with an alpha channel and the block is see-through, per block, automatically (`atlas.py` looks at every tile):
+  - a tile whose pixels are either fully solid or fully gone (leaves, fences, ...) is a *cutout*: drawn like any other block with the gone pixels cut out
+  - a tile with partly see-through pixels (glass, water, ...) is *translucent*: blended with what is behind it; a face between two blocks of the same translucent type is not drawn, and a solid block next to glass keeps its face
+  - the tile row 0 is the bottom row of the png (the atlas is uploaded upside down)
 
 ### Files:
 
@@ -77,7 +83,8 @@ If a setting is missing or has a typo, the game says which one and exits.
 | --- | --- |
 | `r.py` | Entry point: window, main loop, post-processing, fullscreen |
 | `config.py` | Loads `.env.pre` / `.env` and a map file, and checks all of it |
-| `world.py` | Blocks, shapes / trees, and the block mesh |
+| `world.py` | Blocks, shapes / trees, and the block mesh (solid and translucent) |
+| `atlas.py` | Works out which tiles of the texture atlas are see-through |
 | `camera.py` | Movement, mouse look, collisions |
 | `matrices.py` | Model / view / projection matrices |
 | `buffers.py` | OpenGL vertex buffers and the frame buffer |

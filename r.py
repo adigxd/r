@@ -2,12 +2,14 @@ import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
 import argparse
+import numpy as np
 from OpenGL.GL import *
 import pygame
 from pygame.locals import *
 import time
 
 # ./
+import atlas
 import buffers
 from camera import Camera
 import config
@@ -24,6 +26,11 @@ def load_texture(path, mipmaps, tile_size):
     try:
         img = pygame.image.load(path) # load the image file as a pygame surface
         img_data = pygame.image.tostring(img, 'RGBA', True) # convert the surface to a string of pixel data in RGBA format (the True argument flips the image vertically to match OpenGL's coordinate system)
+
+        # pixels that are completely see-through get black as their color, whatever the png has hidden in them: the shader relies on that when it undoes the smoothing of mipmaps at the edge of a cutout
+        pixels = np.frombuffer(img_data, dtype=np.uint8).reshape(-1, 4).copy()
+        pixels[pixels[:, 3] == 0, :3] = 0
+        img_data = pixels.tobytes()
         width, height = img.get_size() # get the width and height of the surface
 
         texture = glGenTextures(1) # generate a new texture object and get its ID
@@ -59,13 +66,19 @@ def main(map_name):
     focus_grace_until = 0.0 # switching fullscreen makes the window lose and regain focus, which must not exit the game
 
     # pygame setup
-    width, height = settings.width, settings.height
     pygame.init()
     pygame.mixer.init(frequency=settings.mixer_frequency, size=settings.mixer_size, channels=settings.mixer_channels, buffer=settings.mixer_buffer)
     pygame.mixer.set_num_channels(2)
-    pygame.display.set_mode((width, height), DOUBLEBUF | OPENGL | (pygame.FULLSCREEN if settings.fullscreen else 0))
+    pygame.display.set_mode((settings.width, settings.height), DOUBLEBUF | OPENGL)
     pygame.display.set_caption('r')
     pygame.display.set_icon(pygame.image.load('./resources/icon.png'))
+
+    # fullscreen is a borderless window as big as the screen, at the screen's own resolution: the monitor never switches video mode, so there is no black flicker (the window starts windowed and switches, the same way F11 does)
+    if settings.fullscreen:
+        focus_grace_until = time.time() + 1.0
+        pygame.display.toggle_fullscreen()
+
+    width, height = pygame.display.get_window_size() # the real size of the window (the size of the screen when it is fullscreen); everything that depends on the size uses these
 
     # music setup (a map without "music" just has none)
     if settings.music:
@@ -80,8 +93,6 @@ def main(map_name):
 
     # opengl setup
     glEnable(GL_DEPTH_TEST)
-    # glEnable(GL_BLEND)
-    # glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) # https://www.khronos.org/opengl/wiki/Blending
     glEnable(GL_CULL_FACE)
     glCullFace(GL_BACK)
     glFrontFace(GL_CCW)
@@ -101,7 +112,7 @@ def main(map_name):
     # ------
 
     # world setup
-    world = World(settings.seed, settings.tile_size, settings.atlas_size)
+    world = World(settings.seed, settings.tile_size, settings.atlas_size, atlas.tile_opacities(settings.atlas_path, settings.tile_size, settings.atlas_size))
     world.build(world_data) # build the world from the map file; this will be replaced with dynamic chunk loading and generation based on the player's position in the world, but for now it serves as a simple test case to ensure that the rendering pipeline is working correctly with the block vertex data and texture coordinates from the atlas
 
     # ------
@@ -274,14 +285,29 @@ def main(map_name):
 
         uniforms.set_matrices(block_program, model, view, projection) # set the uniform variables for the main shader program (model, view, projection matrices)
         uniforms.set_scene(block_program, atlas_id, settings.lights, settings.lighting, camera.pos) # set other uniform variables (e.g. textures, lights)
+        uniforms.set_translucent(block_program, 0)
 
         block_vao, block_vertex_count = world.get_mesh() # get the vertex array object and vertex count for rendering the blocks in the scene; this will be updated dynamically based on the chunks that are loaded and the blocks they contain, allowing for efficient rendering of only the visible blocks with the appropriate texture coordinates from the atlas
 
         if block_vao is not None: # if the block vertex array object has been generated (i.e. there are blocks to render)
              glBindVertexArray(block_vao) # bind the block VAO for rendering
              glDrawArrays(GL_TRIANGLES, 0, block_vertex_count) # draw the blocks as triangles using the vertex count for rendering
-             # future: switch to indexed drawing with glDrawElements and an element buffer object (EBO) for better performance and memory efficiency when rendering complex scenes with many blocks
-             # switch to glDrawElements when using an EBO: glDrawElements(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, None) where index_count is the count of indices in the EBO for rendering the blocks
+
+        # translucent blocks (glass, water, ...) come last: they are blended with what is already drawn behind them
+        # they don't write to the depth buffer (so faces behind them still get drawn), which is why world.get_translucent_mesh sorts them from far to near
+        translucent_vao, translucent_vertex_count = world.get_translucent_mesh(camera.pos)
+
+        if translucent_vao is not None:
+            uniforms.set_translucent(block_program, 1)
+            glEnable(GL_BLEND)
+            glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE) # blend the colors, but keep the alpha of the frame as it is (otherwise screenshots get see-through spots)
+            glDepthMask(GL_FALSE)
+
+            glBindVertexArray(translucent_vao)
+            glDrawArrays(GL_TRIANGLES, 0, translucent_vertex_count)
+
+            glDepthMask(GL_TRUE)
+            glDisable(GL_BLEND)
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL) # post-processing quad is always solid
 
