@@ -44,6 +44,14 @@ def positive(val):
 
     return val
 
+def positive_int(val):
+    val = int(val)
+
+    if val <= 0:
+        raise ValueError('needs a whole number above 0')
+
+    return val
+
 def unit(val):
     val = float(val)
 
@@ -128,6 +136,7 @@ ENV_SETTINGS = {
     'HEIGHT': int,
     'FULLSCREEN': env_flag,
     'MAX_FPS': int,
+    'TICK_RATE': positive_int,
     'FOV': float,
     'NEAR_CLIP': float,
     'FAR_CLIP': float,

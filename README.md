@@ -38,7 +38,11 @@ There are two places, depending on whether a setting belongs to *you* or to *a m
 
 If a setting is missing or has a typo, the game says which one and exits.
 
-**Window and fullscreen:** `WIDTH` and `HEIGHT` are the size of the window when it isn't fullscreen (kept between 1280x720 and 3840x2160). Fullscreen ignores them: it is a borderless window as big as your screen, at your screen's own resolution, so the monitor never switches video mode (no black flicker). F11 switches at any time.
+**Window and fullscreen:** `WIDTH` and `HEIGHT` are the size of the window when it isn't fullscreen (kept between 1280x720 and 3840x2160, and never bigger than your screen). Fullscreen ignores them: it is a borderless window as big as your screen, at your screen's own resolution, so the monitor never switches video mode (no black flicker). F11 switches at any time. Any resolution and aspect ratio works (the field of view is vertical, so a wider screen just shows more to the sides), and on Windows the game tells the system to use real pixels, so it isn't stretched blurry on a screen with display scaling above 100%.
+
+**Physics and frames:** the physics (movement, gravity, jumping, collisions) runs at `TICK_RATE` updates per second (64) no matter how many frames per second are drawn, so the game plays the same on a slow and a fast computer; the frames in between are drawn smoothly blended between two physics steps, and turning with the mouse happens every frame.
+
+**Chunks and view distance:** the blocks are drawn in chunks of 16x16x16. Every frame only the chunks inside the camera's view, and no further away than `FAR_CLIP` (a sphere around the camera, 4096 by default so you only notice it if you lower it), are sent to the graphics card.
 
 ### Maps:
 
@@ -85,8 +89,10 @@ If a setting is missing or has a typo, the game says which one and exits.
 | `config.py` | Loads `.env.pre` / `.env` and a map file, and checks all of it |
 | `world.py` | Blocks, shapes / trees, and the block mesh (solid and translucent) |
 | `atlas.py` | Works out which tiles of the texture atlas are see-through |
-| `camera.py` | Movement, mouse look, collisions |
-| `matrices.py` | Model / view / projection matrices |
+| `camera.py` | Mouse look, physics ticks, collisions |
+| `ticks.py` | Runs the physics at a fixed rate whatever the frame rate is |
+| `chunks.py` | The 16x16x16 chunks and which of them can be seen |
+| `matrices.py` | Model / view / projection matrices, and the 6 planes of the camera's view |
 | `buffers.py` | OpenGL vertex buffers and the frame buffer |
 | `glsl.py` | Shader loading and compiling |
 | `uniforms.py` | Shader uniform values (matrices, lights, ...) |

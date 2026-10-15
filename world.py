@@ -6,6 +6,7 @@ import random
 # ./
 from atlas import OPAQUE, TRANSLUCENT
 import buffers
+from chunks import ChunkBoxes, chunk_of
 
 # format: "BLOCK_NAME": {"top": (col, row), "side": (col, row), "bottom": (col, row)} or {"all": (col, row)} (if all faces of the block use the same texture)
 # a (col, row) can also be a list of them; one of the list is picked at random for every face
@@ -58,6 +59,29 @@ def unpack_scale(scale, name='scale'):
 
     return values
 
+class GlassChunk:
+    # the translucent faces of one chunk: they get a small buffer of their own, because blending only comes out right when the faces are drawn from far to near, so their order changes with the camera
+    def __init__(self, vertices, centers):
+        self.faces = np.frombuffer(vertices, dtype=np.float32).reshape(-1, 48) # one row per face: its 6 vertices of 8 floats
+        self.centers = np.frombuffer(centers, dtype=np.float32).reshape(-1, 3) # the middle of every face
+        self.vao, self.vbo = buffers.make_block_mesh(self.faces.reshape(-1), dynamic=True)
+        self.vertex_count = len(self.faces) * 6
+        self.sorted_for = None # where the camera was when the faces were last sorted
+
+    def sort(self, camera_pos):
+        # redone whenever the camera has moved half a block or more since the last time
+        if self.sorted_for is not None and sum((a - b) ** 2 for a, b in zip(camera_pos, self.sorted_for)) <= 0.25:
+            return
+
+        distance = ((self.centers - np.array(camera_pos, dtype=np.float32)) ** 2).sum(axis=1)
+        order = np.argsort(-distance, kind='stable') # biggest distance first
+        buffers.update_block_mesh(self.vbo, np.ascontiguousarray(self.faces[order]).reshape(-1))
+        self.sorted_for = tuple(camera_pos)
+
+    def free(self):
+        glDeleteVertexArrays(1, [self.vao])
+        glDeleteBuffers(1, [self.vbo])
+
 class World:
     def __init__(self, seed, tile_size, atlas_size, tile_opacity=None):
         # tile_opacity: {(col, row): OPAQUE / CUTOUT / TRANSLUCENT} of the tiles of the atlas (see atlas.py); a tile that isn't in it is opaque
@@ -66,9 +90,14 @@ class World:
         self.atlas_size = atlas_size
         self.blocks = {} # (x, y, z) : block type
         self.dirty = True # if the world has been modified since the mesh was last built
+        # the mesh is cut into chunks (see chunks.py): all the solid ones share one buffer, each being a range of it, and every frame only the ones that can be seen are drawn
         self.vao = None
         self.vbo = None
-        self.vertex_count = 0
+        self.vertex_count = 0 # in the whole buffer
+        self.opaque_boxes = None # ChunkBoxes of the chunks in the buffer
+        self.opaque_first = None # for each of them the first vertex of its range
+        self.opaque_count = None # and how many vertices the range has
+        self.drawn_chunks = 0 # how many chunks the last draw_opaque drew
 
         # how see-through every block type is: the most see-through of its tiles
         tile_opacity = tile_opacity or {}
@@ -81,13 +110,9 @@ class World:
         self.opaque_types = {name for name, opacity in self.opacity.items() if opacity == OPAQUE}
         self.see_through = len(self.opaque_types) != len(self.opacity) # false: every block hides whatever is behind it, which makes building the mesh a lot simpler and faster
 
-        # the translucent blocks are a mesh of their own, drawn after everything else and sorted from far to near (see get_translucent_mesh)
-        self.t_vao = None
-        self.t_vbo = None
-        self.t_vertex_count = 0
-        self.t_faces = None # one row per face: its 6 vertices of 8 floats
-        self.t_centers = None # the middle of every face
-        self.t_sorted_for = None # where the camera was when the faces were last sorted
+        # the translucent blocks are in meshes of their own, one per chunk (see GlassChunk)
+        self.glass_chunks = []
+        self.glass_boxes = None
 
     def set_block(self, x, y, z, block_type):
         self.blocks[(x, y, z)] = block_type
@@ -137,20 +162,18 @@ class World:
             glDeleteVertexArrays(1, [self.vao])
         if self.vbo is not None:
             glDeleteBuffers(1, [self.vbo])
-        if self.t_vao is not None:
-            glDeleteVertexArrays(1, [self.t_vao])
-        if self.t_vbo is not None:
-            glDeleteBuffers(1, [self.t_vbo])
+
+        for chunk in self.glass_chunks:
+            chunk.free()
 
         self.vao = None
         self.vbo = None
         self.vertex_count = 0
-        self.t_vao = None
-        self.t_vbo = None
-        self.t_vertex_count = 0
-        self.t_faces = None
-        self.t_centers = None
-        self.t_sorted_for = None
+        self.opaque_boxes = None
+        self.opaque_first = None
+        self.opaque_count = None
+        self.glass_chunks = []
+        self.glass_boxes = None
 
     def pick_uvs(self, tile):
         # tile can be a single (col, row) tuple or a list of tuples for random selection
@@ -225,32 +248,51 @@ class World:
             add_face(pos_bottom, self.pick_uvs(tiles["bottom"]), normal_bottom)
 
     def rebuild_mesh(self):
-        # generate vertex data for the entire world
-        vertices = array('f') # compact float32 storage (a plain list of floats would cost several times the memory)
-        t_vertices = array('f') # the same for the translucent blocks
-        t_centers = array('f')
+        # generate vertex data for the entire world, chunk by chunk
+        builders = {} # chunk -> (vertices, translucent vertices, middles of the translucent faces); compact float32 storage (a plain list of floats would cost several times the memory)
 
         # purge "AIR" / invalid blocks first so face culling only ever sees real neighbours
         for key in [key for key, block_type in self.blocks.items() if not self.has_geometry(block_type)]:
             del self.blocks[key]
 
+        last_chunk = None
+        builder = None
+
         for (x, y, z), block_type in self.blocks.items():
-            self.add_block_faces(x, y, z, block_type, vertices, t_vertices, t_centers)
+            chunk = chunk_of(x, y, z)
+
+            if chunk != last_chunk: # blocks next to each other in the dict are mostly in the same chunk
+                builder = builders.get(chunk)
+
+                if builder is None:
+                    builder = builders[chunk] = (array('f'), array('f'), array('f'))
+
+                last_chunk = chunk
+
+            self.add_block_faces(x, y, z, block_type, *builder)
 
         self.free_buffers() # free the previous buffers (otherwise they leak on every rebuild)
         self.dirty = False # mark the mesh as up to date since we've just updated the vertex data
 
-        # don't try to draw if there's nothing to draw
-        if vertices:
-            vertex_data = np.frombuffer(vertices, dtype=np.float32)
-            self.vao, self.vbo = buffers.make_block_mesh(vertex_data)
-            self.vertex_count = len(vertices) // 8 # 8 floats per vertex (position, normal, texcoord)
+        # the solid chunks: one buffer with one chunk after the other
+        solid = [chunk for chunk, builder in builders.items() if builder[0]]
 
-        if t_vertices:
-            self.t_faces = np.frombuffer(t_vertices, dtype=np.float32).reshape(-1, 48) # 6 vertices of 8 floats per face
-            self.t_centers = np.frombuffer(t_centers, dtype=np.float32).reshape(-1, 3)
-            self.t_vao, self.t_vbo = buffers.make_block_mesh(self.t_faces.reshape(-1), dynamic=True)
-            self.t_vertex_count = len(t_vertices) // 8
+        if solid:
+            parts = [np.frombuffer(builders[chunk][0], dtype=np.float32) for chunk in solid]
+            counts = np.array([len(part) // 8 for part in parts], dtype=np.int32) # 8 floats per vertex (position, normal, texcoord)
+
+            self.opaque_boxes = ChunkBoxes(solid)
+            self.opaque_count = counts
+            self.opaque_first = np.concatenate(([0], np.cumsum(counts)[:-1])).astype(np.int32)
+            self.vertex_count = int(counts.sum())
+            self.vao, self.vbo = buffers.make_block_mesh(np.concatenate(parts))
+
+        # the translucent chunks: a small buffer each
+        glass = [chunk for chunk, builder in builders.items() if builder[1]]
+
+        if glass:
+            self.glass_boxes = ChunkBoxes(glass)
+            self.glass_chunks = [GlassChunk(builders[chunk][1], builders[chunk][2]) for chunk in glass]
 
     def pick_block_type(self, choices):
         # choices can be a list (equal chance) or a dict {"TYPE": weight} for weighted selection
@@ -476,25 +518,44 @@ class World:
 
         self.rebuild_mesh()
 
-    def get_mesh(self):
+    @property
+    def has_glass(self):
+        return bool(self.glass_chunks)
+
+    def draw_opaque(self, planes, camera_pos, view_distance):
+        # draw the solid chunks that can be seen: inside the view (planes, see matrices.frustum_planes) and not further from the camera than view_distance
+        # everything else is never sent to the GPU, which saves it the work of processing all those vertices just to throw them away
         if self.dirty:
             self.rebuild_mesh()
 
-        return self.vao, self.vertex_count
+        self.drawn_chunks = 0
 
-    def get_translucent_mesh(self, camera_pos):
-        # the mesh of the translucent blocks (glass, water, ...); it has to be drawn after everything else, with blending on
-        # blending is only right when what is further away is drawn first, so the faces are sorted from far to near; that is redone whenever the camera has moved half a block or more since the last time
+        if self.vao is None:
+            return
+
+        visible = self.opaque_boxes.visible(planes, camera_pos, view_distance)
+        firsts = self.opaque_first[visible]
+        counts = self.opaque_count[visible]
+        self.drawn_chunks = len(firsts)
+
+        if self.drawn_chunks:
+            glBindVertexArray(self.vao)
+            glMultiDrawArrays(GL_TRIANGLES, firsts, counts, self.drawn_chunks) # all the chunks in one call (one call per chunk would be slow)
+
+    def draw_translucent(self, planes, camera_pos, view_distance):
+        # draw the translucent chunks that can be seen, the furthest first (blending needs that); the caller has to turn blending on and depth writing off
         if self.dirty:
             self.rebuild_mesh()
 
-        if self.t_vao is None:
-            return None, 0
+        if not self.glass_chunks:
+            return
 
-        if self.t_sorted_for is None or sum((a - b) ** 2 for a, b in zip(camera_pos, self.t_sorted_for)) > 0.25:
-            distance = ((self.t_centers - np.array(camera_pos, dtype=np.float32)) ** 2).sum(axis=1)
-            order = np.argsort(-distance, kind='stable') # biggest distance first
-            buffers.update_block_mesh(self.t_vbo, np.ascontiguousarray(self.t_faces[order]).reshape(-1))
-            self.t_sorted_for = tuple(camera_pos)
+        visible = np.nonzero(self.glass_boxes.visible(planes, camera_pos, view_distance))[0]
+        distance = ((self.glass_boxes.centers[visible] - np.array(camera_pos)) ** 2).sum(axis=1)
 
-        return self.t_vao, self.t_vertex_count
+        for i in visible[np.argsort(-distance, kind='stable')]:
+            chunk = self.glass_chunks[i]
+            chunk.sort(camera_pos) # the faces inside a chunk, furthest first
+
+            glBindVertexArray(chunk.vao)
+            glDrawArrays(GL_TRIANGLES, 0, chunk.vertex_count)

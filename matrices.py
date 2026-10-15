@@ -88,3 +88,18 @@ def projection_matrix(fov, aspect, near, far):
     matrix[3,2] = -1.0 # Set w coordinate for perspective divide
 
     return matrix
+
+def frustum_planes(clip):
+    # the 6 planes (left, right, bottom, top, near, far) around the space the camera can see; clip is projection @ view
+    # each plane is a row [a, b, c, d] with its normal (a, b, c) pointing inwards, so a point (x, y, z) is on the visible side when a*x + b*y + c*z + d >= 0
+    rows = np.asarray(clip, dtype=np.float64)
+    planes = np.array([
+        rows[3] + rows[0], # left
+        rows[3] - rows[0], # right
+        rows[3] + rows[1], # bottom
+        rows[3] - rows[1], # top
+        rows[3] + rows[2], # near
+        rows[3] - rows[2]  # far
+    ])
+
+    return planes / np.linalg.norm(planes[:, :3], axis=1)[:, None] # normal of length 1, so that a * x + ... + d is a real distance

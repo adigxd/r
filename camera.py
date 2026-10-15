@@ -8,6 +8,7 @@ class Camera:
         self.jump_speed = jump_speed
         self.gravity = gravity
         self.pos = pos
+        self.prev_pos = list(pos) # where the player was before the last tick (see render_pos)
         self.width = width # player width
         self.height = height # player height
         self.speed = speed
@@ -24,6 +25,7 @@ class Camera:
         self.vel_y = 0.0
         self.grounded = False
         self.pos = pos
+        self.prev_pos = list(pos) # no blending from where the player was before
 
     def push_out(self, axis):
         # moves the player out of any block it overlaps along one axis (0 = x, 1 = y, 2 = z)
@@ -62,13 +64,17 @@ class Camera:
                     else:
                         self.pos[2] += oz if self.pos[2] > bz + 0.5 else -oz
 
-    def update(self, keys, mouse_rel, dt=1.0):
-        # MOUSE LOOK
+    def look(self, mouse_rel):
+        # MOUSE LOOK, once per frame (not per tick) so that turning follows the mouse right away
         self.rot[0] -= mouse_rel[1] * self.sensitivity # PITCH
         self.rot[1] += mouse_rel[0] * self.sensitivity # YAW
 
         # CLAMP PITCH
         self.rot[0] = max(-89, min(89, self.rot[0]))
+
+    def tick(self, keys, dt):
+        # one physics step of dt seconds (always the same length, see ticks.py): movement, gravity, jumping and collisions
+        self.prev_pos = list(self.pos)
 
         # FORWARD AND RIGHT VECTORS
         yaw = math.radians(self.rot[1])
@@ -115,10 +121,10 @@ class Camera:
             if keys[pygame.K_LSHIFT]: # FLY DOWN
                 move[1] -= self.speed * diagonal_scale * dt
         else: # NORMAL
-            self.vel_y -= self.gravity * dt # gravity
             if keys[pygame.K_SPACE] and self.grounded: # JUMP
                 self.vel_y = self.jump_speed
-            move[1] += self.vel_y * dt
+            move[1] += self.vel_y * dt - 0.5 * self.gravity * dt * dt # the exact distance fallen / risen under constant gravity, so a jump is the same height at any tick rate
+            self.vel_y -= self.gravity * dt # gravity
 
         self.pos[0] += move[0]
         self.push_out(0)
@@ -138,3 +144,8 @@ class Camera:
                 self.grounded = False
             else:
                 self.grounded = False
+
+    def render_pos(self, alpha):
+        # where to draw the player: alpha (0 to 1, see ticks.py) of the way from where the last tick started to where it ended
+        # the physics only moves the player once per tick, so drawing at pos directly would make motion jerk whenever frames and ticks don't line up
+        return [prev + (now - prev) * alpha for prev, now in zip(self.prev_pos, self.pos)]

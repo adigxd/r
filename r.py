@@ -2,10 +2,12 @@ import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
 import argparse
+import ctypes
 import numpy as np
 from OpenGL.GL import *
 import pygame
 from pygame.locals import *
+import sys
 import time
 
 # ./
@@ -16,6 +18,7 @@ import config
 import glsl
 import log
 import matrices
+from ticks import Ticker
 import uniforms
 from world import World
 
@@ -55,6 +58,19 @@ def load_texture(path, mipmaps, tile_size):
 
 # ------
 
+def enable_dpi_awareness():
+    # on a screen with display scaling above 100% (laptops, 4K monitors) Windows tells programs the screen is smaller than it is and then stretches what they draw, which makes it blurry
+    # this tells Windows the game works with real pixels; it has to happen before the window is made
+    if sys.platform != 'win32':
+        return
+
+    try:
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception as e:
+        log.error('Could not turn on DPI awareness (the game may look blurry on a scaled screen)', error=e)
+
+# ------
+
 def main(map_name):
     # all settings come from .env.pre / .env and the map file, so they have to load before anything else starts
     settings, world_data = config.load(map_name)
@@ -66,10 +82,22 @@ def main(map_name):
     focus_grace_until = 0.0 # switching fullscreen makes the window lose and regain focus, which must not exit the game
 
     # pygame setup
+    enable_dpi_awareness()
     pygame.init()
     pygame.mixer.init(frequency=settings.mixer_frequency, size=settings.mixer_size, channels=settings.mixer_channels, buffer=settings.mixer_buffer)
     pygame.mixer.set_num_channels(2)
-    pygame.display.set_mode((settings.width, settings.height), DOUBLEBUF | OPENGL)
+
+    # the window is never bigger than the screen (this only matters on a screen smaller than WIDTH x HEIGHT; fullscreen doesn't use these two at all)
+    window_size = (settings.width, settings.height)
+    desktop_sizes = pygame.display.get_desktop_sizes()
+
+    if desktop_sizes:
+        window_size = (min(window_size[0], desktop_sizes[0][0]), min(window_size[1], desktop_sizes[0][1]))
+
+        if window_size != (settings.width, settings.height):
+            log.debug('Window is bigger than the screen', asked=f'{settings.width}x{settings.height}', using=f'{window_size[0]}x{window_size[1]}')
+
+    pygame.display.set_mode(window_size, DOUBLEBUF | OPENGL)
     pygame.display.set_caption('r')
     pygame.display.set_icon(pygame.image.load('./resources/icon.png'))
 
@@ -78,7 +106,7 @@ def main(map_name):
         focus_grace_until = time.time() + 1.0
         pygame.display.toggle_fullscreen()
 
-    width, height = pygame.display.get_window_size() # the real size of the window (the size of the screen when it is fullscreen); everything that depends on the size uses these
+    width, height = pygame.display.get_window_size() # the real size of the window (the size of the screen when it is fullscreen); everything that depends on the size uses these, and the loop below keeps them up to date
 
     # music setup (a map without "music" just has none)
     if settings.music:
@@ -131,10 +159,6 @@ def main(map_name):
         pygame.quit()
         exit()
 
-    # block_vao: block vertex array object
-    # block_vertex_count: block vertex count for rendering; these will be generated dynamically based on the chunks that are loaded, and will be used to render the blocks in the scene with the appropriate texture coordinates from the atlas
-    block_vao, block_vertex_count = world.get_mesh() # get the vertex array object and vertex count for rendering the blocks in the scene; this will be updated dynamically based on the chunks that are loaded and the blocks they contain, allowing for efficient rendering of only the visible blocks with the appropriate texture coordinates from the atlas
-
     # ------
 
     # shader setup
@@ -185,10 +209,10 @@ def main(map_name):
     # ------
 
     # frame rate is how many frames are rendered per second,
-    # while tick rate is how many times the game loop updates per second;
-    # you can have a high tick rate for smooth input and physics,
-    # but a lower frame rate to save resources
+    # while tick rate is how many times the game updates its physics per second;
+    # they are separate: the physics always runs at TICK_RATE (so it plays the same on every computer), and frames in between are drawn smoothly blended between two ticks
     clock = pygame.time.Clock() # clock for controlling frame rate
+    ticker = Ticker(settings.tick_rate)
 
     while True:
         for event in pygame.event.get():
@@ -211,22 +235,10 @@ def main(map_name):
                 return
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
-                # switch between fullscreen and windowed; the window changes size, so everything that has the window's size has to be made again
+                # switch between fullscreen and windowed; the window changes size, which the loop below notices and handles
                 # (OpenGL objects like textures, shaders and buffers survive the switch, only the frame buffer and the projection depend on the size)
                 focus_grace_until = time.time() + 1.0
                 pygame.display.toggle_fullscreen()
-                width, height = pygame.display.get_window_size() # get_surface() keeps reporting the old size
-
-                buffers.delete_framebuffer(fbo, fbo_texture, rbo)
-                framebuffer = buffers.make_framebuffer(width, height)
-
-                if framebuffer is None: # the reason has already been printed
-                    pygame.quit()
-                    exit()
-
-                fbo, fbo_texture, rbo = framebuffer
-                glViewport(0, 0, width, height)
-                projection = matrices.projection_matrix(settings.fov, width / height, settings.near_clip, settings.far_clip)
 
                 pygame.mouse.set_visible(False)
                 pygame.event.set_grab(True)
@@ -266,12 +278,35 @@ def main(map_name):
             if event.type == pygame.KEYDOWN and event.key == pygame.K_BACKSPACE:
                 camera.set_pos(list(settings.start_pos))
 
-        dt = clock.tick(settings.max_fps) / 1000.0
+        # the window changed size (fullscreen on / off, or anything else the system does to it): everything that has the size of the window has to be made again
+        # asking every frame instead of waiting for an event works the same on every platform, and a window reporting 0 (minimized) is left alone
+        size = pygame.display.get_window_size()
+
+        if size != (width, height) and size[0] > 0 and size[1] > 0:
+            width, height = size
+
+            buffers.delete_framebuffer(fbo, fbo_texture, rbo)
+            framebuffer = buffers.make_framebuffer(width, height)
+
+            if framebuffer is None: # the reason has already been printed
+                pygame.quit()
+                exit()
+
+            fbo, fbo_texture, rbo = framebuffer
+            glViewport(0, 0, width, height)
+            projection = matrices.projection_matrix(settings.fov, width / height, settings.near_clip, settings.far_clip)
+
+        frame_time = clock.tick(settings.max_fps) / 1000.0
 
         mouse_rel = pygame.mouse.get_rel() # get the relative movement of the mouse since the last call to this function
         keys = pygame.key.get_pressed() # get the current state of all keyboard buttons
 
-        camera.update(keys, mouse_rel, dt) # update camera position and rotation based on input
+        camera.look(mouse_rel) # turning happens every frame, so it follows the mouse right away
+
+        for _ in range(ticker.advance(frame_time)): # the physics happens in ticks of the same length, as many as the time since the last frame needs (none, one or several)
+            camera.tick(keys, ticker.dt)
+
+        render_pos = camera.render_pos(ticker.alpha) # the camera is drawn between where the last two ticks put it
 
         glBindFramebuffer(GL_FRAMEBUFFER, fbo) # bind the frame buffer object for off-screen rendering
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) # clear the color and depth buffers for the new frame
@@ -281,30 +316,25 @@ def main(map_name):
 
         glUseProgram(block_program) # use the main shader program for rendering the scene
 
-        view = matrices.view_matrix(camera.pos, camera.rot) # generate the view matrix based on the camera's position and rotation
+        view = matrices.view_matrix(render_pos, camera.rot) # generate the view matrix based on the camera's position and rotation
+        planes = matrices.frustum_planes(projection @ view) # the 6 planes around what the camera can see; chunks outside them are skipped
 
         uniforms.set_matrices(block_program, model, view, projection) # set the uniform variables for the main shader program (model, view, projection matrices)
-        uniforms.set_scene(block_program, atlas_id, settings.lights, settings.lighting, camera.pos) # set other uniform variables (e.g. textures, lights)
+        uniforms.set_scene(block_program, atlas_id, settings.lights, settings.lighting, render_pos) # set other uniform variables (e.g. textures, lights)
         uniforms.set_translucent(block_program, 0)
 
-        block_vao, block_vertex_count = world.get_mesh() # get the vertex array object and vertex count for rendering the blocks in the scene; this will be updated dynamically based on the chunks that are loaded and the blocks they contain, allowing for efficient rendering of only the visible blocks with the appropriate texture coordinates from the atlas
-
-        if block_vao is not None: # if the block vertex array object has been generated (i.e. there are blocks to render)
-             glBindVertexArray(block_vao) # bind the block VAO for rendering
-             glDrawArrays(GL_TRIANGLES, 0, block_vertex_count) # draw the blocks as triangles using the vertex count for rendering
+        # only the chunks in view, and no further away than FAR_CLIP from the camera, are drawn
+        world.draw_opaque(planes, render_pos, settings.far_clip)
 
         # translucent blocks (glass, water, ...) come last: they are blended with what is already drawn behind them
-        # they don't write to the depth buffer (so faces behind them still get drawn), which is why world.get_translucent_mesh sorts them from far to near
-        translucent_vao, translucent_vertex_count = world.get_translucent_mesh(camera.pos)
-
-        if translucent_vao is not None:
+        # they don't write to the depth buffer (so faces behind them still get drawn), which is why they are drawn from far to near
+        if world.has_glass:
             uniforms.set_translucent(block_program, 1)
             glEnable(GL_BLEND)
             glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE) # blend the colors, but keep the alpha of the frame as it is (otherwise screenshots get see-through spots)
             glDepthMask(GL_FALSE)
 
-            glBindVertexArray(translucent_vao)
-            glDrawArrays(GL_TRIANGLES, 0, translucent_vertex_count)
+            world.draw_translucent(planes, render_pos, settings.far_clip)
 
             glDepthMask(GL_TRUE)
             glDisable(GL_BLEND)

@@ -9,7 +9,6 @@ uniform vec2 u_resolution;
 // ordered dithering: the screen is split into little squares (dither pixels), and every one of them is compared against a threshold from a repeating 8x8 Bayer pattern
 // brighter than its threshold = light color, otherwise dark color; the pattern spreads the thresholds out evenly, so brightness comes out as an even texture instead of random dots
 
-const int PIXEL_SIZE = 2; // size of one dither pixel in screen pixels (1 = finest)
 const float BLACK_POINT = 0.01; // anything darker than this is plain dark, so the empty background doesn't speckle
 const float CONTRAST = 0.6; // below 1 brightens the dark parts so more of the dark scene survives (1 = no change)
 const vec3 COLOR_DARK = vec3(0.0, 0.0, 0.0625);
@@ -28,9 +27,12 @@ const float BAYER[64] = float[64](
 
 void main()
 {
+	// size of one dither pixel in screen pixels: 2 on a 1080 pixel high screen, and the same fraction of the screen on every other resolution (at least 1)
+	int pixel_size = max(1, int(round(u_resolution.y / 540.0)));
+
 	// the dither pixel this pixel belongs to, and the middle of it in the scene texture (so a whole dither pixel gets one color)
-	ivec2 cell = ivec2(gl_FragCoord.xy) / PIXEL_SIZE;
-	vec2 uv = (vec2(cell * PIXEL_SIZE) + 0.5 * float(PIXEL_SIZE)) / u_resolution;
+	ivec2 cell = ivec2(gl_FragCoord.xy) / pixel_size;
+	vec2 uv = (vec2(cell * pixel_size) + 0.5 * float(pixel_size)) / u_resolution;
 
 	vec3 color = texture(u_texture, uv).rgb;
 
