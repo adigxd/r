@@ -81,12 +81,10 @@ def main(map_name):
         exit(1)
 
     wireframe = False # debug wireframe mode toggle
-    focus_grace_until = 0.0 # switching fullscreen makes the window lose and regain focus, which must not exit the game
 
     def wants_exit(event):
-        # closing the window, Right Shift, or the window losing focus (but not the focus changes that showing or switching the window causes)
-        focus_lost = event.type == pygame.ACTIVEEVENT and event.gain == 0 and time.time() > focus_grace_until
-        return event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_RSHIFT) or focus_lost
+        # closing the window or Right Shift (losing focus, for example by alt-tabbing, doesn't exit: the game keeps running and lets go of the mouse)
+        return event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_RSHIFT)
 
     # pygame setup
     enable_dpi_awareness()
@@ -122,7 +120,6 @@ def main(map_name):
         pygame.display.toggle_fullscreen()
 
     # now the window is shown, straight at its final size and place (a hidden window only goes fullscreen when it is shown), with a loading bar in it until the game is ready
-    focus_grace_until = time.time() + 1.0 # showing a window makes it gain and lose focus, which must not exit the game
     pygame.mouse.set_visible(False)
 
     if window is not None:
@@ -259,6 +256,7 @@ def main(map_name):
     clock = pygame.time.Clock() # clock for controlling frame rate
     ticker = Ticker(settings.tick_rate)
     lights_warned = False
+    had_focus = True # the mouse was just grabbed; the loop notices if the window doesn't actually have the focus
 
     while True:
         for event in pygame.event.get():
@@ -281,7 +279,6 @@ def main(map_name):
             if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
                 # switch between fullscreen and windowed; the window changes size, which the loop below notices and handles
                 # (OpenGL objects like textures, shaders and buffers survive the switch, only the frame buffer and the projection depend on the size)
-                focus_grace_until = time.time() + 1.0
                 pygame.display.toggle_fullscreen()
 
                 pygame.mouse.set_visible(False)
@@ -342,7 +339,21 @@ def main(map_name):
 
         frame_time = clock.tick(settings.max_fps) / 1000.0
 
+        # alt-tabbing away (or anything else taking the focus) doesn't stop anything: the game keeps running, it just lets go of the mouse until the window has the focus again
+        has_focus = pygame.key.get_focused()
+
+        if has_focus != had_focus:
+            had_focus = has_focus
+            pygame.event.set_grab(has_focus)
+            pygame.mouse.set_visible(not has_focus)
+            pygame.mouse.get_rel() # throw away the movement in between
+            camera.set_speed(settings.speed) # letting go of the right mouse button in another window never reaches the game, so sprinting would stay on
+
         mouse_rel = pygame.mouse.get_rel() # get the relative movement of the mouse since the last call to this function
+
+        if not has_focus:
+            mouse_rel = (0, 0) # the mouse moving over the window while another window has the focus is not looking around
+
         keys = pygame.key.get_pressed() # get the current state of all keyboard buttons
 
         camera.look(mouse_rel) # turning happens every frame, so it follows the mouse right away

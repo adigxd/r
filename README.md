@@ -29,6 +29,8 @@ python r.py [map]
 | Right Ctrl | Toggle wireframe debug mode |
 | Right Shift | Exit |
 
+Alt-tabbing away doesn't close the game: it keeps running, lets go of the mouse, and takes it back when you come back.
+
 ### Settings:
 
 There are two places, depending on whether a setting belongs to *you* or to *a map*:
