@@ -17,9 +17,6 @@ ENV_FILES = ['./.env.pre', './.env']
 WINDOW_MIN = (1280, 720)
 WINDOW_MAX = (3840, 2160)
 
-# the shader has an array of this size (MAX_LIGHTS in shaders/block.frag), keep them in sync
-MAX_LIGHTS = 16
-
 # ------
 
 def vec3(val):
@@ -137,6 +134,7 @@ ENV_SETTINGS = {
     'FULLSCREEN': env_flag,
     'MAX_FPS': int,
     'TICK_RATE': positive_int,
+    'MAX_LIGHTS': positive_int,
     'FOV': float,
     'NEAR_CLIP': float,
     'FAR_CLIP': float,
@@ -182,7 +180,7 @@ MAP_OPTIONAL_SETTINGS = {
     'music': (optional_text, None), # music file in MUSIC_DIR (e.g. "1.mp3"); no "music" means the map has no music
 }
 
-# a map file's "lights" is a list of 0 to MAX_LIGHTS of these
+# a map file's "lights" is a list of any number of these (every frame the game picks the ones that can light something visible, see lights.py)
 LIGHT_REQUIRED = {
     'radius': positive, # radius of light; nothing past it is lit
 }
@@ -277,12 +275,9 @@ def load_map(map_path, errors):
         errors.append('lights (needs a list, it can be empty)')
         lights_raw = []
 
-    if len(lights_raw) > MAX_LIGHTS:
-        errors.append(f'lights (at most {MAX_LIGHTS} lights, there are {len(lights_raw)})')
-
     lights = []
 
-    for i, light_raw in enumerate(lights_raw[:MAX_LIGHTS]):
+    for i, light_raw in enumerate(lights_raw):
         where = f'lights[{i}].'
 
         if not isinstance(light_raw, dict):

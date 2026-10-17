@@ -1,6 +1,9 @@
 #version 330 core
 
-#define MAX_LIGHTS 16 // keep in sync with MAX_LIGHTS in config.py
+// the size of the arrays below: the game puts the real number in before the shader is compiled (glsl.with_defines), depending on what the graphics card can take
+#ifndef MAX_LIGHTS
+#define MAX_LIGHTS 16
+#endif
 
 out vec4 frag_color; // output color
 

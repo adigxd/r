@@ -58,7 +58,7 @@ If a setting is missing or has a typo, the game says which one and exits.
 ```
 
 - `music` is optional, it is a file in the `MUSIC_DIR` folder from `.env.pre`; a map without it is silent.
-- **`lights`** is a list of 0 to 16 lights, each with its own settings (only `radius` is needed, and `pos` unless it follows the player):
+- **`lights`** is a list of as many lights as you like (none, a few, thousands), each with its own settings (only `radius` is needed, and `pos` unless it follows the player):
 
 ```json
 {"pos": [10, 4, 0], "radius": 14, "intensity": 1.5, "color": [1.0, 0.2, 0.2], "falloff": "inverse_square", "falloff_scale": 0.3, "snap": true, "diffuse": 1.0}
@@ -66,6 +66,8 @@ If a setting is missing or has a typo, the game says which one and exits.
 ```
 
   `follow_player` makes `pos` an offset from the player, `snap` puts the light in the middle of its block, `diffuse` is how much the angle of a surface matters (0 to 1), `falloff` is `"linear"` or `"inverse_square"`. There are no shadows (light goes through walls), and a light inside a block doesn't light that block's own sides. `python r.py lights` is a map with five different lights to look at and fly around.
+
+  A map can have any number of lights, but the graphics card can only light with a few at a time (`MAX_LIGHTS` in `.env.pre`, 32 by default, and fewer on a card that can't take that many). So every frame the game picks the lights that can light something you can see (a light behind you still counts if it reaches things in front of you, and lights further away than `FAR_CLIP` don't); if more than `MAX_LIGHTS` of them matter, the brightest, biggest and closest win, and the game tells you once that lights are being left out. Lights that follow the player are always used. A light that can't be seen costs the graphics card nothing; the only cost is a little time per frame to look through all the lights (about 0.4 ms for 10,000 lights, 4 ms for 100,000), so a map with thousands of lights runs about as fast as one with a few.
 - **`lighting`** is everything that isn't one light, all optional: `ambient`, `ambient_color`, `brightness`, `per_block` (light whole blocks or single pixels) and `face_shade` (how bright each side of a block is: `top`, `bottom`, `front`, `back`, `left`, `right`).
 - **`world`** has `voxels`, `cubes`, `spheres`, `cylinders`, `cones`, `trees` and `forests`; block names are in `world.py`.
   - A cube is either its edges (`x_min` ... `z_max`) or its middle and size (`x`, `y`, `z`, `size`; `size` can be one number or `[x, y, z]`).
@@ -95,6 +97,7 @@ If a setting is missing or has a typo, the game says which one and exits.
 | `matrices.py` | Model / view / projection matrices, and the 6 planes of the camera's view |
 | `buffers.py` | OpenGL vertex buffers and the frame buffer |
 | `glsl.py` | Shader loading and compiling |
+| `lights.py` | Picks the lights that matter every frame (a map can have any number) |
 | `uniforms.py` | Shader uniform values (matrices, lights, ...) |
 | `log.py` | Console logging |
 | `.env.pre` | Default settings for every map |

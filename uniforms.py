@@ -1,14 +1,23 @@
-import math
 import numpy as np
 from OpenGL.GL import *
+
+# ./
+from lights import light_position
 
 def set_matrices(program, model, view, projection):
     glUniformMatrix4fv(glGetUniformLocation(program, 'u_model'), 1, GL_TRUE, model)
     glUniformMatrix4fv(glGetUniformLocation(program, 'u_view'), 1, GL_TRUE, view)
     glUniformMatrix4fv(glGetUniformLocation(program, 'u_projection'), 1, GL_TRUE, projection)
 
+def light_capacity():
+    # how many lights this graphics card can take at once: its limit on uniform numbers for a fragment shader divided by what one light needs
+    # one light is 2 vectors and 5 single numbers, and every entry of an array can take a slot of 4 numbers, so 7 slots = 28 numbers; 128 numbers are kept for the other uniforms of the shader
+    components = int(glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_COMPONENTS))
+
+    return max(1, (components - 128) // 28)
+
 # other uniforms that dont fit in the above function, such as lighting and textures
-# lights and lighting are the map's "lights" and "lighting" (see config.py); player_pos is needed for the lights that follow the player
+# lights is the lights to use this frame (see LightSet.select in lights.py) and lighting is the map's "lighting" (see config.py); player_pos is needed for the lights that follow the player
 def set_scene(program, atlas_id, lights, lighting, player_pos):
     # set texture uniform
     atlas_loc = glGetUniformLocation(program, 'u_atlas')
@@ -21,18 +30,7 @@ def set_scene(program, atlas_id, lights, lighting, player_pos):
     glUniform1i(glGetUniformLocation(program, 'u_light_count'), count)
 
     if count:
-        positions = []
-
-        for light in lights:
-            if light.follow_player:
-                pos = [player_pos[i] + light.pos[i] for i in range(3)] # light.pos is the offset from the player
-            else:
-                pos = list(light.pos)
-
-            if light.snap:
-                pos = [math.floor(v) + 0.5 for v in pos] # middle of the block the light is in
-
-            positions.append(pos)
+        positions = [light_position(light, player_pos) for light in lights]
 
         glUniform3fv(glGetUniformLocation(program, 'u_light_pos'), count, np.array(positions, dtype=np.float32))
         glUniform3fv(glGetUniformLocation(program, 'u_light_color'), count, np.array([light.color for light in lights], dtype=np.float32))

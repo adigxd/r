@@ -16,6 +16,7 @@ import buffers
 from camera import Camera
 import config
 import glsl
+from lights import LightSet
 import log
 import matrices
 from ticks import Ticker
@@ -161,9 +162,18 @@ def main(map_name):
 
     # ------
 
+    # lights: a map can have any number, but the shader takes a fixed number at a time; every frame the ones that can light something visible are picked (see lights.py)
+    # how many it can take depends on the graphics card, so a card that can't take MAX_LIGHTS gets fewer instead of failing
+    max_lights = min(settings.max_lights, uniforms.light_capacity())
+
+    if max_lights < settings.max_lights:
+        log.debug('This graphics card can take fewer lights at once than MAX_LIGHTS', asked=settings.max_lights, using=max_lights)
+
+    light_set = LightSet(settings.lights)
+
     # shader setup
     block_vertex_source = glsl.read_source(settings.block_vertex_shader)
-    block_fragment_source = glsl.read_source(settings.block_fragment_shader)
+    block_fragment_source = glsl.with_defines(glsl.read_source(settings.block_fragment_shader), {'MAX_LIGHTS': max_lights})
 
     if not block_vertex_source or not block_fragment_source:
         pygame.quit()
@@ -213,6 +223,7 @@ def main(map_name):
     # they are separate: the physics always runs at TICK_RATE (so it plays the same on every computer), and frames in between are drawn smoothly blended between two ticks
     clock = pygame.time.Clock() # clock for controlling frame rate
     ticker = Ticker(settings.tick_rate)
+    lights_warned = False
 
     while True:
         for event in pygame.event.get():
@@ -320,7 +331,12 @@ def main(map_name):
         planes = matrices.frustum_planes(projection @ view) # the 6 planes around what the camera can see; chunks outside them are skipped
 
         uniforms.set_matrices(block_program, model, view, projection) # set the uniform variables for the main shader program (model, view, projection matrices)
-        uniforms.set_scene(block_program, atlas_id, settings.lights, settings.lighting, render_pos) # set other uniform variables (e.g. textures, lights)
+        lights = light_set.select(planes, render_pos, settings.far_clip, max_lights) # the lights that can light something visible this frame
+
+        if light_set.relevant > max_lights and not lights_warned: # said once, so the author of a map knows lights get left out (and a light can pop on or off when the choice changes)
+            lights_warned = True
+            log.debug('More lights can light the screen than fit at once, so the brightest, biggest and closest are used', can_light=light_set.relevant, fit_at_once=max_lights, to_fit_more='raise MAX_LIGHTS in .env')
+        uniforms.set_scene(block_program, atlas_id, lights, settings.lighting, render_pos) # set other uniform variables (e.g. textures, lights)
         uniforms.set_translucent(block_program, 0)
 
         # only the chunks in view, and no further away than FAR_CLIP from the camera, are drawn

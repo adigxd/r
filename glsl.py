@@ -12,6 +12,16 @@ def read_source(path):
 
         return None
 
+def with_defines(source, defines):
+    # puts "#define NAME value" for every name in defines into a shader, right after its #version line (which has to stay first)
+    # the shader keeps its own line numbers, so an error in the log still points at the right line of the file
+    if not source or not defines:
+        return source
+
+    head, rest = source.split('\n', 1)
+
+    return head + '\n' + ''.join(f'#define {name} {value}\n' for name, value in defines.items()) + '#line 2\n' + rest
+
 def compile_shader(source, shader_type):
     shader = glCreateShader(shader_type)
     glShaderSource(shader, source)
