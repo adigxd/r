@@ -247,8 +247,9 @@ class World:
         if exposed[5]:
             add_face(pos_bottom, self.pick_uvs(tiles["bottom"]), normal_bottom)
 
-    def rebuild_mesh(self):
+    def rebuild_mesh(self, progress=None):
         # generate vertex data for the entire world, chunk by chunk
+        # progress, if given, is called now and then with how far along the face building is (0 to 1)
         builders = {} # chunk -> (vertices, translucent vertices, middles of the translucent faces); compact float32 storage (a plain list of floats would cost several times the memory)
 
         # purge "AIR" / invalid blocks first so face culling only ever sees real neighbours
@@ -257,8 +258,12 @@ class World:
 
         last_chunk = None
         builder = None
+        total = max(1, len(self.blocks))
 
-        for (x, y, z), block_type in self.blocks.items():
+        for done, ((x, y, z), block_type) in enumerate(self.blocks.items()):
+            if progress and done % 8192 == 0:
+                progress(done / total)
+
             chunk = chunk_of(x, y, z)
 
             if chunk != last_chunk: # blocks next to each other in the dict are mostly in the same chunk
@@ -466,15 +471,29 @@ class World:
                         height = random.randint(height_avg - height_err, height_avg + height_err)
                         self.add_tree(x + x_off, y, z + z_off, height, tree_type)
 
-    def build(self, world_data):
+    def build(self, world_data, progress=None):
         # build the world from the "world" object of a map file (loaded by config.load)
+        # progress, if given, is called now and then with how far along the build is (0 to 1), for a loading bar
         random.seed(self.seed)
 
         self.blocks = {}
         self.dirty = True
 
+        # placing the shapes is about a seventh of the work, building the mesh is the rest (the progress of the mesh is counted in blocks)
+        shapes_share = 0.15
+        total = max(1, sum(len(world_data.get(name, [])) for name in ('voxels', 'cubes', 'spheres', 'cylinders', 'cones', 'trees', 'forests')))
+        done = 0
+
+        def placed():
+            nonlocal done
+            done += 1
+
+            if progress:
+                progress(shapes_share * done / total)
+
         for voxel in world_data.get('voxels', []):
             self.add_voxel(voxel['x'], voxel['y'], voxel['z'], voxel['blocks'])
+            placed()
 
         # a cube is either its 6 edges (x_min ... z_max) or its middle and size (x, y, z, size)
         for cube in world_data.get('cubes', []):
@@ -490,33 +509,44 @@ class World:
                     cube['blocks']
                 )
 
+            placed()
+
         # spheres, cylinders and cones can have a "scale" to stretch them
         for sphere in world_data.get('spheres', []):
             self.fill_sphere(
                 sphere['x'], sphere['y'], sphere['z'], sphere['radius'], sphere['blocks'], sphere.get('scale', 1)
             )
+            placed()
 
         for cylinder in world_data.get('cylinders', []):
             self.fill_cylinder(
                 cylinder['x'], cylinder['y'], cylinder['z'], cylinder['radius'], cylinder['height'], cylinder['axis'], cylinder['blocks'], cylinder.get('scale', 1)
             )
+            placed()
 
         for cone in world_data.get('cones', []):
             self.fill_cone(
                 cone['x'], cone['y'], cone['z'], cone['radius'], cone['height'], cone['axis'], cone['flip'], cone['blocks'], cone.get('scale', 1)
             )
+            placed()
 
         for tree in world_data.get('trees', []):
             self.add_tree(
                 tree['x'], tree['y'], tree['z'], tree['height'], tree['type']
             )
+            placed()
 
         for forest in world_data.get('forests', []):
             self.add_forest(
                 forest['x'], forest['y'], forest['z'], forest['radius'], forest['height_avg'], forest['height_err'], forest['density'], forest['shape'], forest['type']
             )
+            placed()
 
-        self.rebuild_mesh()
+        mesh_progress = (lambda fraction: progress(shapes_share + (1 - shapes_share) * fraction)) if progress else None
+        self.rebuild_mesh(mesh_progress)
+
+        if progress:
+            progress(1)
 
     @property
     def has_glass(self):

@@ -17,6 +17,7 @@ from camera import Camera
 import config
 import glsl
 from lights import LightSet
+from loading import LoadingBar, Cancelled
 import log
 import matrices
 from ticks import Ticker
@@ -82,6 +83,11 @@ def main(map_name):
     wireframe = False # debug wireframe mode toggle
     focus_grace_until = 0.0 # switching fullscreen makes the window lose and regain focus, which must not exit the game
 
+    def wants_exit(event):
+        # closing the window, Right Shift, or the window losing focus (but not the focus changes that showing or switching the window causes)
+        focus_lost = event.type == pygame.ACTIVEEVENT and event.gain == 0 and time.time() > focus_grace_until
+        return event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_RSHIFT) or focus_lost
+
     # pygame setup
     enable_dpi_awareness()
     pygame.init()
@@ -98,8 +104,7 @@ def main(map_name):
         if window_size != (settings.width, settings.height):
             log.debug('Window is bigger than the screen', asked=f'{settings.width}x{settings.height}', using=f'{window_size[0]}x{window_size[1]}')
 
-    # the window stays hidden while the game starts up (going fullscreen, building the map, loading textures and shaders) and is shown when the first frame is ready
-    # otherwise a window would sit on the screen for seconds with nothing in it, and with fullscreen a windowed one would flash up before the switch
+    # the window is made hidden and only shown once it has its final size and place (below), so with fullscreen a windowed one never flashes up before the switch
     # (if this version of pygame can't hide a window, it is just shown right away)
     try:
         from pygame._sdl2.video import Window
@@ -109,14 +114,24 @@ def main(map_name):
 
     pygame.display.set_mode(window_size, DOUBLEBUF | OPENGL | (pygame.HIDDEN if can_hide else 0))
     window = Window.from_display_module() if can_hide else None # kept for the whole run, the window it stands for is not meant to outlive it
-    window_shown = window is None # nothing to show if the window wasn't hidden
     pygame.display.set_caption('r')
     pygame.display.set_icon(pygame.image.load('./resources/icon.png'))
 
     # fullscreen is a borderless window as big as the screen, at the screen's own resolution: the monitor never switches video mode, so there is no black flicker (the window starts windowed and switches, the same way F11 does)
     if settings.fullscreen:
-        focus_grace_until = time.time() + 1.0
         pygame.display.toggle_fullscreen()
+
+    # now the window is shown, straight at its final size and place (a hidden window only goes fullscreen when it is shown), with a loading bar in it until the game is ready
+    focus_grace_until = time.time() + 1.0 # showing a window makes it gain and lose focus, which must not exit the game
+    pygame.mouse.set_visible(False)
+
+    if window is not None:
+        window.show()
+        window.focus()
+
+    pygame.event.pump()
+    loading = LoadingBar(wants_exit)
+    loading.draw(0)
 
     width, height = pygame.display.get_window_size() # the real size of the window (the size of the screen when it is fullscreen); everything that depends on the size uses these, and the loop below keeps them up to date
 
@@ -136,7 +151,6 @@ def main(map_name):
     glEnable(GL_CULL_FACE)
     glCullFace(GL_BACK)
     glFrontFace(GL_CCW)
-    glClearColor(*settings.background_color, 1) # set background color
 
     # ------
 
@@ -153,14 +167,24 @@ def main(map_name):
 
     # world setup
     world = World(settings.seed, settings.tile_size, settings.atlas_size, atlas.tile_opacities(settings.atlas_path, settings.tile_size, settings.atlas_size))
-    world.build(world_data) # build the world from the map file; this will be replaced with dynamic chunk loading and generation based on the player's position in the world, but for now it serves as a simple test case to ensure that the rendering pipeline is working correctly with the block vertex data and texture coordinates from the atlas
+
+    try:
+        world.build(world_data, loading.update) # build the world from the map file; this will be replaced with dynamic chunk loading and generation based on the player's position in the world, but for now it serves as a simple test case to ensure that the rendering pipeline is working correctly with the block vertex data and texture coordinates from the atlas
+    except Cancelled: # the player closed the game while the map was building
+        pygame.mixer.music.stop()
+        buffers.delete_framebuffer(fbo, fbo_texture, rbo)
+        pygame.quit()
+
+        return
+
+    glClearColor(*settings.background_color, 1) # set background color (the loading bar used its own)
 
     # ------
 
     # camera and mouse setup
     camera = Camera(settings.fly, settings.jump_speed, settings.gravity, settings.player_width, settings.player_height, list(settings.start_pos), settings.speed, settings.mouse_sensitivity, world=world)
-    pygame.mouse.set_visible(False)
     pygame.event.set_grab(True)
+    pygame.mouse.get_rel() # the mouse moved while loading; that is not a turn of the camera
 
     # ------
 
@@ -237,24 +261,8 @@ def main(map_name):
     lights_warned = False
 
     while True:
-        if not window_shown: # everything is loaded, so the window can be shown now
-            # going fullscreen only takes effect once the window is shown, so the window gets its final size here and the size check below makes the frame buffer fit it before the first real frame is drawn
-            # a black frame goes out at once, so nothing but black is ever on the screen in between
-            focus_grace_until = time.time() + 1.0 # showing a window makes it gain and lose focus, which must not exit the game
-            window.show()
-            window.focus()
-            window_shown = True
-
-            pygame.mouse.set_visible(False)
-            pygame.event.set_grab(True)
-            glBindFramebuffer(GL_FRAMEBUFFER, 0)
-            glClear(GL_COLOR_BUFFER_BIT)
-            pygame.display.flip()
-
         for event in pygame.event.get():
-            focus_lost = event.type == pygame.ACTIVEEVENT and event.gain == 0 and time.time() > focus_grace_until
-
-            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_RSHIFT) or focus_lost:
+            if wants_exit(event):
                 # cleanup and exit
                 pygame.mixer.music.stop()
 

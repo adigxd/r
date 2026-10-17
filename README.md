@@ -11,7 +11,7 @@ pip install -r requirements.txt
 python r.py [map]
 ```
 
-`map` is a file in `maps` (with or without `.json`); default is `1`.
+`map` is a file in `maps` (with or without `.json`); default is `1`, a bright world to explore (meadow, temple, village, forests, desert, mountain, lighthouse and a floating island you can walk up to by the staircase). While a map builds, a loading bar fills in the window.
 
 ### Keybinds:
 
@@ -98,6 +98,7 @@ If a setting is missing or has a typo, the game says which one and exits.
 | `buffers.py` | OpenGL vertex buffers and the frame buffer |
 | `glsl.py` | Shader loading and compiling |
 | `lights.py` | Picks the lights that matter every frame (a map can have any number) |
+| `loading.py` | The loading bar shown while the map builds |
 | `uniforms.py` | Shader uniform values (matrices, lights, ...) |
 | `log.py` | Console logging |
 | `.env.pre` | Default settings for every map |

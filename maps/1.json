@@ -1,30 +1,41 @@
 {
-    "name": "0",
-    "description": "0",
+    "name": "bright world",
+    "description": "A bright showcase: meadow, temple, aqueduct, village, forests, desert, mountain, a floating island, crystals and lights",
     "config":
     {
         "seed": 7987523224469270,
-        "start_pos": [0.0, 2.0, 0.0],
-        "background_color": [0.0078125, 0.0078125, 0.0078125],
+        "start_pos": [0.0, 3.0, 26.0],
+        "background_color": [0.53, 0.78, 0.96],
         "fly": false,
         "gravity": 24,
-        "jump_speed": 6,
+        "jump_speed": 9,
         "speed": 8,
         "sprint_multiplier": 4.0,
         "player_width": 0.5,
-        "player_height": 1.5,
-        "music": "1.mp3"
+        "player_height": 1.5
     },
     "lights":
     [
-        {"follow_player": true, "radius": 16, "intensity": 1, "color": [0.5, 0.875, 1.0]}
+        {"pos": [40, 160, 60], "radius": 520, "intensity": 0.55, "color": [1.0, 0.95, 0.85]},
+        {"pos": [-60, 120, -80], "radius": 460, "intensity": 0.28, "color": [0.7, 0.85, 1.0]},
+        {"pos": [-26, 9, -3], "radius": 20, "intensity": 1.2, "color": [0.2, 0.9, 1.0]},
+        {"pos": [28, 10, -1], "radius": 20, "intensity": 1.2, "color": [1.0, 0.3, 0.9]},
+        {"pos": [0, 10, -67], "radius": 20, "intensity": 1.2, "color": [1.0, 0.8, 0.3]},
+        {"pos": [-6, 8, -17], "radius": 15, "intensity": 1.0, "color": [1.0, 0.65, 0.3], "falloff": "inverse_square", "falloff_scale": 0.1},
+        {"pos": [6, 8, -17], "radius": 15, "intensity": 1.0, "color": [1.0, 0.65, 0.3], "falloff": "inverse_square", "falloff_scale": 0.1},
+        {"pos": [0, 12, -38], "radius": 14, "intensity": 1.1, "color": [1.0, 0.9, 0.5], "diffuse": 0.3},
+        {"pos": [-34, 6, 28], "radius": 10, "intensity": 1.0, "color": [1.0, 0.75, 0.4]},
+        {"pos": [-78, 26, -48], "radius": 24, "intensity": 0.8, "color": [1.0, 0.95, 0.8]},
+        {"pos": [70, 100, -170], "radius": 40, "intensity": 3.0, "color": [1.0, 0.85, 0.4], "diffuse": 0.2},
+        {"pos": [46, 38, -8], "radius": 26, "intensity": 1.6, "color": [1.0, 0.9, 0.5]},
+        {"follow_player": true, "pos": [0, 0, 0], "radius": 9, "intensity": 0.2, "color": [1.0, 0.9, 0.7], "snap": false}
     ],
     "lighting":
     {
-        "ambient": 0.0625,
-        "ambient_color": [0.5, 0.875, 1.0],
-        "brightness": 0.5,
-        "per_block": true,
+        "ambient": 0.85,
+        "ambient_color": [1.0, 0.98, 0.92],
+        "brightness": 0.93,
+        "per_block": false,
         "face_shade":
         {
             "top": 1.0,
@@ -39,13 +50,460 @@
     {
         "cubes":
         [
-            {"x_min": -256, "y_min": 0, "z_min": -256, "x_max": 256, "y_max": 1, "z_max": 256, "blocks": [
+            {"x_min": -120, "y_min": 0, "z_min": -120, "x_max": 120, "y_max": 1, "z_max": 120, "blocks": [
                 "DIRT"
+            ]},
+            {"x_min": -120, "y_min": 1, "z_min": -120, "x_max": 120, "y_max": 2, "z_max": 120, "blocks": [
+                "GRASS"
+            ]},
+            {"x_min": -70, "y_min": 1, "z_min": 18, "x_max": 40, "y_max": 2, "z_max": 90, "blocks": {"GRASS": 60, "STONE_LIGHT": 1, "LOG_REDWOOD_NAKED": 1, "LOG_MAPLE_NAKED": 1}},
+            {"x_min": -40, "y_min": 1, "z_min": -75, "x_max": 70, "y_max": 2, "z_max": -60, "blocks": {"GRASS": 70, "STONE_LIGHT": 1, "LOG_REDWOOD_NAKED": 1}},
+            {"x_min": 40, "y_min": 1, "z_min": 28, "x_max": 110, "y_max": 2, "z_max": 100, "blocks": [
+                "SAND"
+            ]},
+            {"x": 0, "y": 2, "z": -34, "size": [37, 2, 37], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 0, "y": 3, "z": -34, "size": [31, 1, 31], "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x": 0, "y": 4, "z": -38, "size": [9, 1, 5], "blocks": [
+                "STONE_BRICK_DARK"
+            ]},
+            {"x": 0, "y": 15, "z": -34, "size": [35, 2, 35], "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": 18, "y_min": 1, "z_min": 8, "x_max": 70, "y_max": 13, "z_max": 11, "blocks": [
+                "STONE_BRICK_BOLD"
+            ]},
+            {"x_min": 23, "y_min": 2, "z_min": 7, "x_max": 29, "y_max": 8, "z_max": 12, "blocks": [
+                "AIR"
+            ]},
+            {"x_min": 35, "y_min": 2, "z_min": 7, "x_max": 41, "y_max": 8, "z_max": 12, "blocks": [
+                "AIR"
+            ]},
+            {"x_min": 47, "y_min": 2, "z_min": 7, "x_max": 53, "y_max": 8, "z_max": 12, "blocks": [
+                "AIR"
+            ]},
+            {"x_min": 59, "y_min": 2, "z_min": 7, "x_max": 65, "y_max": 8, "z_max": 12, "blocks": [
+                "AIR"
+            ]},
+            {"x_min": -40, "y_min": 2, "z_min": 24, "x_max": -29, "y_max": 8, "z_max": 33, "blocks": [
+                "LOG_MAPLE_NAKED"
+            ]},
+            {"x_min": -39, "y_min": 3, "z_min": 25, "x_max": -30, "y_max": 8, "z_max": 32, "blocks": [
+                "AIR"
+            ]},
+            {"x_min": -36, "y_min": 3, "z_min": 32, "x_max": -34, "y_max": 5, "z_max": 33, "blocks": [
+                "AIR"
+            ]},
+            {"x_min": -40, "y_min": 4, "z_min": 26, "x_max": -39, "y_max": 6, "z_max": 28, "blocks": [
+                "AIR"
+            ]},
+            {"x_min": -30, "y_min": 4, "z_min": 26, "x_max": -29, "y_max": 6, "z_max": 28, "blocks": [
+                "AIR"
+            ]},
+            {"x_min": -56, "y_min": 2, "z_min": 34, "x_max": -47, "y_max": 8, "z_max": 43, "blocks": [
+                "LOG_PINE_NAKED"
+            ]},
+            {"x_min": -55, "y_min": 3, "z_min": 35, "x_max": -48, "y_max": 8, "z_max": 42, "blocks": [
+                "AIR"
+            ]},
+            {"x_min": -53, "y_min": 3, "z_min": 42, "x_max": -51, "y_max": 5, "z_max": 43, "blocks": [
+                "AIR"
+            ]},
+            {"x_min": -56, "y_min": 4, "z_min": 36, "x_max": -55, "y_max": 6, "z_max": 38, "blocks": [
+                "AIR"
+            ]},
+            {"x_min": -48, "y_min": 4, "z_min": 36, "x_max": -47, "y_max": 6, "z_max": 38, "blocks": [
+                "AIR"
+            ]},
+            {"x_min": -32, "y_min": 1, "z_min": -54, "x_max": -30, "y_max": 3, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -34, "y_min": 1, "z_min": -54, "x_max": -32, "y_max": 4, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -36, "y_min": 1, "z_min": -54, "x_max": -34, "y_max": 5, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -38, "y_min": 1, "z_min": -54, "x_max": -36, "y_max": 6, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -40, "y_min": 1, "z_min": -54, "x_max": -38, "y_max": 7, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -42, "y_min": 1, "z_min": -54, "x_max": -40, "y_max": 8, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -44, "y_min": 1, "z_min": -54, "x_max": -42, "y_max": 9, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -46, "y_min": 1, "z_min": -54, "x_max": -44, "y_max": 10, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -48, "y_min": 1, "z_min": -54, "x_max": -46, "y_max": 11, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -50, "y_min": 1, "z_min": -54, "x_max": -48, "y_max": 12, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -52, "y_min": 1, "z_min": -54, "x_max": -50, "y_max": 13, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -54, "y_min": 1, "z_min": -54, "x_max": -52, "y_max": 14, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -56, "y_min": 1, "z_min": -54, "x_max": -54, "y_max": 15, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -58, "y_min": 1, "z_min": -54, "x_max": -56, "y_max": 16, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -60, "y_min": 1, "z_min": -54, "x_max": -58, "y_max": 17, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -62, "y_min": 1, "z_min": -54, "x_max": -60, "y_max": 18, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -64, "y_min": 1, "z_min": -54, "x_max": -62, "y_max": 19, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": -66, "y_min": 1, "z_min": -54, "x_max": -64, "y_max": 20, "z_max": -50, "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x_min": 54, "y_min": 2, "z_min": 60, "x_max": 78, "y_max": 16, "z_max": 66, "blocks": [
+                "SAND"
+            ]},
+            {"x_min": 61, "y_min": 2, "z_min": 59, "x_max": 71, "y_max": 7, "z_max": 67, "blocks": [
+                "AIR"
+            ]},
+            {"x": 96, "y": 2, "z": 98, "size": [21, 1, 21], "blocks": [
+                "LOG_MAPLE_NAKED"
+            ]},
+            {"x": 96, "y": 3, "z": 98, "size": [19, 1, 19], "blocks": [
+                "SAND"
+            ]},
+            {"x": 96, "y": 4, "z": 98, "size": [17, 1, 17], "blocks": [
+                "LOG_MAPLE_NAKED"
+            ]},
+            {"x": 96, "y": 5, "z": 98, "size": [15, 1, 15], "blocks": [
+                "SAND"
+            ]},
+            {"x": 96, "y": 6, "z": 98, "size": [13, 1, 13], "blocks": [
+                "LOG_MAPLE_NAKED"
+            ]},
+            {"x": 96, "y": 7, "z": 98, "size": [11, 1, 11], "blocks": [
+                "SAND"
+            ]},
+            {"x": 96, "y": 8, "z": 98, "size": [9, 1, 9], "blocks": [
+                "LOG_MAPLE_NAKED"
+            ]},
+            {"x": 96, "y": 9, "z": 98, "size": [7, 1, 7], "blocks": [
+                "SAND"
+            ]}
+        ],
+        "spheres":
+        [
+            {"x": -70, "y": 2, "z": 66, "radius": 20, "scale": [1.5, 0.5, 1.3], "blocks": [
+                "GRASS"
+            ]},
+            {"x": -98, "y": 2, "z": 14, "radius": 16, "scale": [1.3, 0.55, 1.6], "blocks": [
+                "GRASS"
+            ]},
+            {"x": 14, "y": 2, "z": 96, "radius": 18, "scale": [1.8, 0.45, 1.2], "blocks": [
+                "GRASS"
+            ]},
+            {"x": -30, "y": 2, "z": 92, "radius": 12, "scale": [1.4, 0.5, 1.4], "blocks": [
+                "GRASS"
+            ]},
+            {"x": 100, "y": 2, "z": -20, "radius": 14, "scale": [1.2, 0.6, 1.5], "blocks": [
+                "GRASS"
+            ]},
+            {"x": 58, "y": 2, "z": 52, "radius": 15, "scale": [2.0, 0.36, 1.4], "blocks": [
+                "SAND"
+            ]},
+            {"x": 86, "y": 2, "z": 74, "radius": 13, "scale": [1.6, 0.42, 2.0], "blocks": [
+                "SAND"
+            ]},
+            {"x": 72, "y": 2, "z": 40, "radius": 10, "scale": [1.5, 0.5, 1.5], "blocks": [
+                "SAND"
+            ]},
+            {"x": 98, "y": 2, "z": 48, "radius": 9, "scale": [1.2, 0.5, 1.8], "blocks": [
+                "SAND"
+            ]},
+            {"x": 50, "y": 11, "z": 36, "radius": 4, "scale": [1.8, 0.45, 1.8], "blocks": {"LEAF_WINDSWEPT": 5, "AIR": 1}},
+            {"x": 54, "y": 13, "z": 33, "radius": 4, "scale": [1.8, 0.45, 1.8], "blocks": {"LEAF_WINDSWEPT": 5, "AIR": 1}},
+            {"x": 47, "y": 10, "z": 40, "radius": 4, "scale": [1.8, 0.45, 1.8], "blocks": {"LEAF_WINDSWEPT": 5, "AIR": 1}},
+            {"x": 80, "y": 12, "z": 94, "radius": 4, "scale": [1.8, 0.45, 1.8], "blocks": {"LEAF_WINDSWEPT": 5, "AIR": 1}},
+            {"x": 0, "y": 8, "z": -38, "radius": 2, "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -30, "y": 3, "z": 36, "radius": 2, "blocks": {"LEAF_MAPLE": 3, "AIR": 1}},
+            {"x": -44, "y": 3, "z": 38, "radius": 2, "blocks": {"LEAF_PINE": 3, "AIR": 1}},
+            {"x": -24, "y": 3, "z": 28, "radius": 2, "blocks": {"LEAF_MAPLE": 3, "AIR": 1}},
+            {"x": -18, "y": 13, "z": 52, "radius": 4, "blocks": {"LEAF_MAPLE": 4, "AIR": 1}},
+            {"x": 20, "y": 13, "z": 58, "radius": 4, "blocks": {"LEAF_MAPLE": 4, "AIR": 1}},
+            {"x": -10, "y": 13, "z": 66, "radius": 4, "blocks": {"LEAF_MAPLE": 4, "AIR": 1}},
+            {"x": 34, "y": 13, "z": 14, "radius": 4, "blocks": {"LEAF_MAPLE": 4, "AIR": 1}},
+            {"x": -28, "y": 13, "z": 6, "radius": 4, "blocks": {"LEAF_MAPLE": 4, "AIR": 1}},
+            {"x": 46, "y": 13, "z": 8, "radius": 4, "blocks": {"LEAF_MAPLE": 4, "AIR": 1}},
+            {"x": -78, "y": 17, "z": -52, "radius": 13, "scale": [1.0, 0.22, 1.0], "blocks": [
+                "GRASS"
+            ]},
+            {"x": 70, "y": 118, "z": -170, "radius": 11, "blocks": [
+                "SAND"
+            ]},
+            {"x": -40, "y": 88, "z": 20, "radius": 10, "scale": [1.8, 0.7, 1.2], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -53, "y": 87, "z": 23, "radius": 7, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -26, "y": 87, "z": 18, "radius": 8, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -37, "y": 91, "z": 14, "radius": 7, "scale": [1.3, 0.8, 1.0], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 30, "y": 96, "z": -30, "radius": 12, "scale": [1.8, 0.7, 1.2], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 15, "y": 95, "z": -26, "radius": 8, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 46, "y": 95, "z": -32, "radius": 9, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 34, "y": 100, "z": -37, "radius": 8, "scale": [1.3, 0.8, 1.0], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 80, "y": 84, "z": 60, "radius": 9, "scale": [1.8, 0.7, 1.2], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 69, "y": 83, "z": 63, "radius": 6, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 92, "y": 83, "z": 58, "radius": 7, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 83, "y": 87, "z": 55, "radius": 6, "scale": [1.3, 0.8, 1.0], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -90, "y": 92, "z": -50, "radius": 11, "scale": [1.8, 0.7, 1.2], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -104, "y": 91, "z": -47, "radius": 7, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -75, "y": 91, "z": -52, "radius": 9, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -87, "y": 95, "z": -56, "radius": 7, "scale": [1.3, 0.8, 1.0], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 10, "y": 100, "z": 90, "radius": 11, "scale": [1.8, 0.7, 1.2], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -4, "y": 99, "z": 93, "radius": 7, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 25, "y": 99, "z": 88, "radius": 9, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 13, "y": 103, "z": 84, "radius": 7, "scale": [1.3, 0.8, 1.0], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -20, "y": 86, "z": -90, "radius": 13, "scale": [1.8, 0.7, 1.2], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -36, "y": 85, "z": -86, "radius": 9, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -2, "y": 85, "z": -93, "radius": 10, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -16, "y": 90, "z": -97, "radius": 9, "scale": [1.3, 0.8, 1.0], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 60, "y": 90, "z": -110, "radius": 9, "scale": [1.8, 0.7, 1.2], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 48, "y": 89, "z": -107, "radius": 6, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 73, "y": 89, "z": -112, "radius": 7, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 63, "y": 93, "z": -115, "radius": 6, "scale": [1.3, 0.8, 1.0], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -100, "y": 84, "z": 70, "radius": 9, "scale": [1.8, 0.7, 1.2], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -111, "y": 83, "z": 73, "radius": 6, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -88, "y": 83, "z": 68, "radius": 7, "scale": [1.5, 0.7, 1.1], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -97, "y": 87, "z": 65, "radius": 6, "scale": [1.3, 0.8, 1.0], "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -26, "y": 6, "z": -6, "radius": 3, "scale": [0.55, 2.4, 0.55], "blocks": [
+                "STONE_LIGHT"
+            ]},
+            {"x": 28, "y": 6, "z": -4, "radius": 3, "scale": [0.55, 2.8, 0.55], "blocks": [
+                "STONE_LIGHT"
+            ]},
+            {"x": 0, "y": 6, "z": -70, "radius": 3, "scale": [0.55, 3.2, 0.55], "blocks": [
+                "STONE_LIGHT"
+            ]}
+        ],
+        "cylinders":
+        [
+            {"x": 50, "y": 2, "z": 36, "radius": 1, "height": 9, "axis": "y", "blocks": [
+                "LOG_WINDSWEPT"
+            ]},
+            {"x": 54, "y": 2, "z": 33, "radius": 1, "height": 11, "axis": "y", "blocks": [
+                "LOG_WINDSWEPT"
+            ]},
+            {"x": 47, "y": 2, "z": 40, "radius": 1, "height": 8, "axis": "y", "blocks": [
+                "LOG_WINDSWEPT"
+            ]},
+            {"x": 80, "y": 2, "z": 94, "radius": 1, "height": 10, "axis": "y", "blocks": [
+                "LOG_WINDSWEPT"
+            ]},
+            {"x": -13, "y": 4, "z": -50, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -6, "y": 4, "z": -50, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 0, "y": 4, "z": -50, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 6, "y": 4, "z": -50, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 13, "y": 4, "z": -50, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -13, "y": 4, "z": -42, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -13, "y": 4, "z": -34, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -13, "y": 4, "z": -26, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 13, "y": 4, "z": -42, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 13, "y": 4, "z": -34, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 13, "y": 4, "z": -26, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -13, "y": 4, "z": -18, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": -6, "y": 4, "z": -18, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 6, "y": 4, "z": -18, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 13, "y": 4, "z": -18, "radius": 2, "height": 11, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 26, "y": 8, "z": 7, "radius": 3, "height": 5, "axis": "z", "blocks": [
+                "AIR"
+            ]},
+            {"x": 38, "y": 8, "z": 7, "radius": 3, "height": 5, "axis": "z", "blocks": [
+                "AIR"
+            ]},
+            {"x": 50, "y": 8, "z": 7, "radius": 3, "height": 5, "axis": "z", "blocks": [
+                "AIR"
+            ]},
+            {"x": 62, "y": 8, "z": 7, "radius": 3, "height": 5, "axis": "z", "blocks": [
+                "AIR"
+            ]},
+            {"x": -18, "y": 2, "z": 52, "radius": 1, "height": 11, "axis": "y", "blocks": [
+                "LOG_WINDSWEPT"
+            ]},
+            {"x": 20, "y": 2, "z": 58, "radius": 1, "height": 11, "axis": "y", "blocks": [
+                "LOG_WINDSWEPT"
+            ]},
+            {"x": -10, "y": 2, "z": 66, "radius": 1, "height": 11, "axis": "y", "blocks": [
+                "LOG_WINDSWEPT"
+            ]},
+            {"x": 34, "y": 2, "z": 14, "radius": 1, "height": 11, "axis": "y", "blocks": [
+                "LOG_WINDSWEPT"
+            ]},
+            {"x": -28, "y": 2, "z": 6, "radius": 1, "height": 11, "axis": "y", "blocks": [
+                "LOG_WINDSWEPT"
+            ]},
+            {"x": 46, "y": 2, "z": 8, "radius": 1, "height": 11, "axis": "y", "blocks": [
+                "LOG_WINDSWEPT"
+            ]},
+            {"x": 46, "y": 2, "z": -8, "radius": 4, "height": 6, "axis": "y", "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x": 46, "y": 8, "z": -8, "radius": 4, "height": 6, "axis": "y", "blocks": [
+                "LOG_REDWOOD_NAKED"
+            ]},
+            {"x": 46, "y": 14, "z": -8, "radius": 4, "height": 6, "axis": "y", "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x": 46, "y": 20, "z": -8, "radius": 4, "height": 6, "axis": "y", "blocks": [
+                "LOG_REDWOOD_NAKED"
+            ]},
+            {"x": 46, "y": 26, "z": -8, "radius": 4, "height": 6, "axis": "y", "blocks": [
+                "STONE_BRICK_LIGHT"
+            ]},
+            {"x": 46, "y": 32, "z": -8, "radius": 3, "height": 3, "axis": "y", "blocks": [
+                "STONE_SOLID_LIGHT"
+            ]},
+            {"x": 66, "y": 7, "z": 59, "radius": 5, "height": 8, "axis": "z", "blocks": [
+                "AIR"
+            ]}
+        ],
+        "cones":
+        [
+            {"x": 0, "y": 16, "z": -34, "radius": 19, "height": 9, "axis": "y", "flip": false, "blocks": [
+                "LOG_REDWOOD_NAKED"
+            ]},
+            {"x": -35, "y": 8, "z": 28, "radius": 8, "height": 6, "axis": "y", "flip": false, "blocks": [
+                "LOG_REDWOOD_NAKED"
+            ]},
+            {"x": -52, "y": 8, "z": 38, "radius": 7, "height": 6, "axis": "y", "flip": false, "blocks": [
+                "LOG_MAPLE_NAKED"
+            ]},
+            {"x": 88, "y": 2, "z": -88, "radius": 27, "height": 44, "axis": "y", "flip": false, "blocks": {"STONE_SOLID_DARK": 3, "STONE_DARK": 2, "STONE_BOLD": 1}},
+            {"x": 88, "y": 32, "z": -88, "radius": 8.990909090909092, "height": 14, "axis": "y", "flip": false, "blocks": [
+                "STONE_LIGHT"
+            ]},
+            {"x": -78, "y": 8, "z": -52, "radius": 13, "height": 10, "axis": "y", "flip": true, "blocks": [
+                "DIRT"
+            ]},
+            {"x": 46, "y": 35, "z": -8, "radius": 5, "height": 5, "axis": "y", "flip": false, "blocks": [
+                "LOG_REDWOOD_NAKED"
             ]}
         ],
         "trees":
         [
-            {"x": 0, "y": 1, "z": 12, "height": 64, "type": "REDWOOD"}
+            {"x": -92, "y": 2, "z": -66, "height": 58, "type": "REDWOOD"},
+            {"x": -80, "y": 2, "z": -92, "height": 46, "type": "REDWOOD"},
+            {"x": -104, "y": 2, "z": -40, "height": 66, "type": "REDWOOD"},
+            {"x": -78, "y": 20, "z": -52, "height": 9, "type": "MAPLE"}
+        ],
+        "forests":
+        [
+            {"x": 46, "y": 2, "z": -50, "radius": 20, "height_avg": 20, "height_err": 5, "density": 0.016, "shape": "circle", "type": "PINE"},
+            {"x": -58, "y": 2, "z": -22, "radius": 24, "height_avg": 9, "height_err": 3, "density": 0.01, "shape": "circle", "type": "MAPLE"}
         ]
     }
 }
