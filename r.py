@@ -98,7 +98,18 @@ def main(map_name):
         if window_size != (settings.width, settings.height):
             log.debug('Window is bigger than the screen', asked=f'{settings.width}x{settings.height}', using=f'{window_size[0]}x{window_size[1]}')
 
-    pygame.display.set_mode(window_size, DOUBLEBUF | OPENGL)
+    # the window stays hidden while the game starts up (going fullscreen, building the map, loading textures and shaders) and is shown when the first frame is ready
+    # otherwise a window would sit on the screen for seconds with nothing in it, and with fullscreen a windowed one would flash up before the switch
+    # (if this version of pygame can't hide a window, it is just shown right away)
+    try:
+        from pygame._sdl2.video import Window
+        can_hide = hasattr(pygame, 'HIDDEN') and hasattr(Window, 'from_display_module') and hasattr(Window, 'show')
+    except ImportError:
+        can_hide = False
+
+    pygame.display.set_mode(window_size, DOUBLEBUF | OPENGL | (pygame.HIDDEN if can_hide else 0))
+    window = Window.from_display_module() if can_hide else None # kept for the whole run, the window it stands for is not meant to outlive it
+    window_shown = window is None # nothing to show if the window wasn't hidden
     pygame.display.set_caption('r')
     pygame.display.set_icon(pygame.image.load('./resources/icon.png'))
 
@@ -226,6 +237,20 @@ def main(map_name):
     lights_warned = False
 
     while True:
+        if not window_shown: # everything is loaded, so the window can be shown now
+            # going fullscreen only takes effect once the window is shown, so the window gets its final size here and the size check below makes the frame buffer fit it before the first real frame is drawn
+            # a black frame goes out at once, so nothing but black is ever on the screen in between
+            focus_grace_until = time.time() + 1.0 # showing a window makes it gain and lose focus, which must not exit the game
+            window.show()
+            window.focus()
+            window_shown = True
+
+            pygame.mouse.set_visible(False)
+            pygame.event.set_grab(True)
+            glBindFramebuffer(GL_FRAMEBUFFER, 0)
+            glClear(GL_COLOR_BUFFER_BIT)
+            pygame.display.flip()
+
         for event in pygame.event.get():
             focus_lost = event.type == pygame.ACTIVEEVENT and event.gain == 0 and time.time() > focus_grace_until
 
