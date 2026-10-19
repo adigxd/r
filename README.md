@@ -11,7 +11,7 @@ pip install -r requirements.txt
 python r.py [map]
 ```
 
-`map` is a file in `maps` (with or without `.json`); default is `1`, a bright world to explore (meadow, temple, village, forests, desert, mountain, lighthouse and a floating island you can walk up to by the staircase). While a map builds, a loading bar fills in the window.
+`map` is a file in `maps` (with or without `.json`); default is `parkour` (see below); `1` is a bright daytime world to explore (meadow, temple, village, forests, desert, mountain, lighthouse and a floating island you can walk up to by the staircase). While a map builds, a loading bar fills in the window.
 
 `python r.py parkour` is a giant bunny hop playground: hold W + Space to hop (a jump rises 2.4 blocks), hold the right mouse button to sprint (needed to cross the highway gaps fast, they can be walked as well), Backspace starts over. Climb the Needle in the middle (a spiral of stepping stones, 125 hops up), or take a highway to one of eight districts; falling just puts you on the arena floor.
 
