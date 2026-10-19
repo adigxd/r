@@ -1,3 +1,6 @@
+### VER-1.16-20261018215714
+- `COLLISION_STEP` is now 0.375 blocks (was 0.4); all collision and parkour route tests pass with it
+
 ### VER-1.15-20261018213440
 - Escape (as well as Backspace) puts the player back at the spawn of the map
 - Fix: collision at high speed. The old way of getting out of a block was to push the player out of it along the nearest side, so a player that went further into a block in one tick than half a block (50+ blocks per second, or a hard fall) was pushed out of the far side: phasing through walls and pillars, and being put on top of a pillar; falling fast onto a floor one block thick put the eye below the middle of the block and pushed the player down through it (from 500 blocks up)

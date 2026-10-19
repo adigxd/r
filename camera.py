@@ -5,7 +5,7 @@ EPS = 1e-6 # overlaps smaller than this are rounding errors, not collisions
 
 
 class Camera:
-    def __init__(self, fly, jump_speed, gravity, width, height, pos, speed, sensitivity, rot=None, world=None, collision_step=0.4):
+    def __init__(self, fly, jump_speed, gravity, width, height, pos, speed, sensitivity, rot=None, world=None, collision_step=0.375):
         self.fly = fly # True: fly around with no physics; False: gravity and collisions
         self.jump_speed = jump_speed
         self.gravity = gravity
