@@ -18,7 +18,8 @@ def light_capacity():
 
 # other uniforms that dont fit in the above function, such as lighting and textures
 # lights is the lights to use this frame (see LightSet.select in lights.py) and lighting is the map's "lighting" (see config.py); player_pos is needed for the lights that follow the player
-def set_scene(program, atlas_id, lights, lighting, player_pos):
+def set_scene(program, atlas_id, lights, lighting, player_pos, weights=None):
+    # weights: how much of its intensity each light gets (0 to 1), for lights that are fading in or out (see LightSet.select); no weights means all of it
     # set texture uniform
     atlas_loc = glGetUniformLocation(program, 'u_atlas')
     glActiveTexture(GL_TEXTURE0) # this sets the active texture unit to 0, which is the default texture unit; this means that subsequent texture operations will affect the texture bound to GL_TEXTURE0
@@ -35,7 +36,7 @@ def set_scene(program, atlas_id, lights, lighting, player_pos):
         glUniform3fv(glGetUniformLocation(program, 'u_light_pos'), count, np.array(positions, dtype=np.float32))
         glUniform3fv(glGetUniformLocation(program, 'u_light_color'), count, np.array([light.color for light in lights], dtype=np.float32))
         glUniform1fv(glGetUniformLocation(program, 'u_light_radius'), count, np.array([light.radius for light in lights], dtype=np.float32))
-        glUniform1fv(glGetUniformLocation(program, 'u_light_intensity'), count, np.array([light.intensity for light in lights], dtype=np.float32))
+        glUniform1fv(glGetUniformLocation(program, 'u_light_intensity'), count, np.array([light.intensity * (weights[i] if weights else 1.0) for i, light in enumerate(lights)], dtype=np.float32))
         glUniform1iv(glGetUniformLocation(program, 'u_light_falloff'), count, np.array([light.falloff for light in lights], dtype=np.int32))
         glUniform1fv(glGetUniformLocation(program, 'u_light_falloff_scale'), count, np.array([light.falloff_scale for light in lights], dtype=np.float32))
         glUniform1fv(glGetUniformLocation(program, 'u_light_diffuse'), count, np.array([light.diffuse for light in lights], dtype=np.float32))

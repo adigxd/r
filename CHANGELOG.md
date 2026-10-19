@@ -1,3 +1,7 @@
+### VER-1.13-20261018210530
+- Fix: lights flickered when the map has more lights than `MAX_LIGHTS` (the parkour map has 300, 32 fit at a time): every frame the best 32 are picked, and as the camera moved the ranking changed and lights popped on and off; now a light that wins or loses a place fades in or out over 0.25 s (`LightSet.select` takes the time of the frame and gives every light a weight, `uniforms.set_scene` multiplies the intensity with it), a light that is already in has to be 30% worse than a newcomer to lose its place, and at most an eighth of the places (4 of 32) hold lights that are fading out, so at most that many lights change at a time (the others wait a few frames); lights that only start to touch the view and everything when all the lights fit are not changed (maps with few lights render pixel for pixel as before); on the parkour map flying along 4 routes: 738 pops of a light by half or more before, none now
+- Why not just a bigger `MAX_LIGHTS`: every light the shader loops over costs about 0.12 ms at 1920x1080 on a 3070 (32 lights: 2.8 ms a frame, 64: 6 ms, 128: 15 ms)
+
 ### VER-1.12-20261018200920
 - `python r.py` with no map now starts `parkour` (it was `1`; `python r.py 1` still gives the bright world)
 

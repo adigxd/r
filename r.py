@@ -375,12 +375,12 @@ def main(map_name):
         planes = matrices.frustum_planes(projection @ view) # the 6 planes around what the camera can see; chunks outside them are skipped
 
         uniforms.set_matrices(block_program, model, view, projection) # set the uniform variables for the main shader program (model, view, projection matrices)
-        lights = light_set.select(planes, render_pos, settings.far_clip, max_lights) # the lights that can light something visible this frame
+        lights = light_set.select(planes, render_pos, settings.far_clip, max_lights, frame_time) # the lights that can light something visible this frame (the ones that win or lose a place fade in or out over a short time instead of popping)
 
         if light_set.relevant > max_lights and not lights_warned: # said once, so the author of a map knows lights get left out (and a light can pop on or off when the choice changes)
             lights_warned = True
             log.debug('More lights can light the screen than fit at once, so the brightest, biggest and closest are used', can_light=light_set.relevant, fit_at_once=max_lights, to_fit_more='raise MAX_LIGHTS in .env')
-        uniforms.set_scene(block_program, atlas_id, lights, settings.lighting, render_pos) # set other uniform variables (e.g. textures, lights)
+        uniforms.set_scene(block_program, atlas_id, lights, settings.lighting, render_pos, light_set.weights) # set other uniform variables (e.g. textures, lights)
         uniforms.set_translucent(block_program, 0)
 
         # only the chunks in view, and no further away than FAR_CLIP from the camera, are drawn
