@@ -182,7 +182,7 @@ def main(map_name):
     # ------
 
     # camera and mouse setup
-    camera = Camera(settings.fly, settings.jump_speed, settings.gravity, settings.player_width, settings.player_height, list(settings.start_pos), settings.speed, settings.mouse_sensitivity, world=world)
+    camera = Camera(settings.fly, settings.jump_speed, settings.gravity, settings.player_width, settings.player_height, list(settings.start_pos), settings.speed, settings.mouse_sensitivity, world=world, collision_step=settings.collision_step)
     pygame.event.set_grab(True)
     pygame.mouse.get_rel() # the mouse moved while loading; that is not a turn of the camera
 
@@ -319,7 +319,7 @@ def main(map_name):
                 if event.button == 3:
                     camera.set_speed(settings.speed)
 
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_BACKSPACE:
+            if event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE): # back to the spawn of the map
                 camera.set_pos(list(settings.start_pos))
 
         # the window changed size (fullscreen on / off, or anything else the system does to it): everything that has the size of the window has to be made again

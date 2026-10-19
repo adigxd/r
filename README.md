@@ -13,7 +13,7 @@ python r.py [map]
 
 `map` is a file in `maps` (with or without `.json`); default is `parkour` (see below); `1` is a bright daytime world to explore (meadow, temple, village, forests, desert, mountain, lighthouse and a floating island you can walk up to by the staircase). While a map builds, a loading bar fills in the window.
 
-`python r.py parkour` is a giant bunny hop playground: hold W + Space to hop (a jump rises 2.4 blocks), hold the right mouse button to sprint (needed to cross the highway gaps fast, they can be walked as well), Backspace starts over. Climb the Needle in the middle (a spiral of stepping stones, 125 hops up), or take a highway to one of eight districts; falling just puts you on the arena floor.
+`python r.py parkour` is a giant bunny hop playground: hold W + Space to hop (a jump rises 2.4 blocks), hold the right mouse button to sprint (needed to cross the highway gaps fast, they can be walked as well), Escape (or Backspace) puts you back at the spawn. Climb the Needle in the middle (a spiral of stepping stones, 125 hops up), or take a highway to one of eight districts; falling just puts you on the arena floor.
 
 ### Keybinds:
 
@@ -24,7 +24,7 @@ python r.py [map]
 | Right mouse button | Hold to increase movement speed |
 | Space | Fly up in debug mode; jump in normal mode |
 | Left Shift | Fly down in debug mode |
-| Backspace | Reset position |
+| Escape / Backspace | Back to the spawn of the map |
 | F11 | Toggle fullscreen |
 | Backslash (`\`) | Cycle post-processing shader |
 | Backquote (`` ` ``) | Save screenshot |

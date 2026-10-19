@@ -175,6 +175,7 @@ ENV_SETTINGS = {
     'MAX_FPS': int,
     'TICK_RATE': positive_int,
     'MAX_FRAME_TIME': positive,
+    'COLLISION_STEP': fraction,
     'MAX_LIGHTS': positive_int,
     'LIGHT_FADE_TIME': non_negative,
     'LIGHT_FADE_SHARE': half_or_less,
