@@ -14,6 +14,7 @@ import time
 import atlas
 import buffers
 from camera import Camera
+import chunks
 import config
 import glsl
 from lights import LightSet
@@ -80,6 +81,8 @@ def main(map_name):
     if settings is None: # the reason has already been printed
         exit(1)
 
+    chunks.set_chunk_size(settings.chunk_size) # before the world is built
+
     wireframe = False # debug wireframe mode toggle
 
     def wants_exit(event):
@@ -127,7 +130,7 @@ def main(map_name):
         window.focus()
 
     pygame.event.pump()
-    loading = LoadingBar(wants_exit)
+    loading = LoadingBar(wants_exit, settings.loading_bar_fps, settings.loading_bar_width)
     loading.draw(0)
 
     width, height = pygame.display.get_window_size() # the real size of the window (the size of the screen when it is fullscreen); everything that depends on the size uses these, and the loop below keeps them up to date
@@ -163,7 +166,7 @@ def main(map_name):
     # ------
 
     # world setup
-    world = World(settings.seed, settings.tile_size, settings.atlas_size, atlas.tile_opacities(settings.atlas_path, settings.tile_size, settings.atlas_size))
+    world = World(settings.seed, settings.tile_size, settings.atlas_size, atlas.tile_opacities(settings.atlas_path, settings.tile_size, settings.atlas_size), settings.glass_sort_distance)
 
     try:
         world.build(world_data, loading.update) # build the world from the map file; this will be replaced with dynamic chunk loading and generation based on the player's position in the world, but for now it serves as a simple test case to ensure that the rendering pipeline is working correctly with the block vertex data and texture coordinates from the atlas
@@ -201,7 +204,7 @@ def main(map_name):
     if max_lights < settings.max_lights:
         log.debug('This graphics card can take fewer lights at once than MAX_LIGHTS', asked=settings.max_lights, using=max_lights)
 
-    light_set = LightSet(settings.lights)
+    light_set = LightSet(settings.lights, settings.light_cell_size, settings.light_fade_time, settings.light_fade_share, settings.light_stickiness)
 
     # shader setup
     block_vertex_source = glsl.read_source(settings.block_vertex_shader)
@@ -254,7 +257,7 @@ def main(map_name):
     # while tick rate is how many times the game updates its physics per second;
     # they are separate: the physics always runs at TICK_RATE (so it plays the same on every computer), and frames in between are drawn smoothly blended between two ticks
     clock = pygame.time.Clock() # clock for controlling frame rate
-    ticker = Ticker(settings.tick_rate)
+    ticker = Ticker(settings.tick_rate, settings.max_frame_time)
     lights_warned = False
     had_focus = True # the mouse was just grabbed; the loop notices if the window doesn't actually have the focus
 

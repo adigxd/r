@@ -57,6 +57,46 @@ def unit(val):
 
     return val
 
+def non_negative(val):
+    val = float(val)
+
+    if val < 0:
+        raise ValueError('needs a number of 0 or more')
+
+    return val
+
+def at_least_one(val):
+    val = float(val)
+
+    if val < 1:
+        raise ValueError('needs a number of 1 or more')
+
+    return val
+
+def half_or_less(val):
+    val = float(val)
+
+    if not 0 <= val <= 0.5:
+        raise ValueError('needs a number from 0 to 0.5')
+
+    return val
+
+def fraction(val):
+    val = float(val)
+
+    if not 0 < val <= 1:
+        raise ValueError('needs a number above 0, up to 1')
+
+    return val
+
+def power_of_two(val):
+    val = int(val)
+
+    if val < 4 or val & (val - 1):
+        raise ValueError('needs a power of 2 (4, 8, 16, 32, ...)')
+
+    return val
+
 def optional_text(val):
     if val is None: # "music": null is the same as no "music"
         return None
@@ -134,7 +174,16 @@ ENV_SETTINGS = {
     'FULLSCREEN': env_flag,
     'MAX_FPS': int,
     'TICK_RATE': positive_int,
+    'MAX_FRAME_TIME': positive,
     'MAX_LIGHTS': positive_int,
+    'LIGHT_FADE_TIME': non_negative,
+    'LIGHT_FADE_SHARE': half_or_less,
+    'LIGHT_STICKINESS': at_least_one,
+    'LIGHT_CELL_SIZE': positive_int,
+    'CHUNK_SIZE': power_of_two,
+    'GLASS_SORT_DISTANCE': positive,
+    'LOADING_BAR_FPS': positive_int,
+    'LOADING_BAR_WIDTH': fraction,
     'FOV': float,
     'NEAR_CLIP': float,
     'FAR_CLIP': float,

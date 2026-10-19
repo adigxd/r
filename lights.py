@@ -1,8 +1,6 @@
 import math
 import numpy as np
 
-CELL_SIZE = 64 # the lights of a map are sorted into cubes of this size, so a frame only has to look at the lights of the cubes that can be seen
-FADE_TIME = 0.25 # seconds a light takes to fade in or out when the choice of which lights to use changes (see LightSet.select)
 
 def light_position(light, player_pos):
     # where a light is in the world
@@ -18,8 +16,14 @@ def light_position(light, player_pos):
 
 class LightSet:
     # all the lights of a map; a map can have any number, but the shader can only take a few at a time (see select)
-    def __init__(self, lights):
+    def __init__(self, lights, cell_size=64, fade_time=0.25, fade_share=0.125, stickiness=1.3):
+        # cell_size: the lights of a map are sorted into cubes of this size, so a frame only has to look at the lights of the cubes that can be seen
+        # fade_time, fade_share, stickiness: how lights fade when there are more than fit (see select); LIGHT_FADE_TIME, LIGHT_FADE_SHARE, LIGHT_STICKINESS in .env.pre
         self.lights = lights
+        self.cell_size = cell_size
+        self.fade_time = fade_time
+        self.fade_share = fade_share
+        self.stickiness = stickiness
         self.follow = [i for i, light in enumerate(lights) if light.follow_player] # these are always where the player is, so always relevant
 
         fixed = [i for i, light in enumerate(lights) if not light.follow_player]
@@ -38,9 +42,9 @@ class LightSet:
         self.cell_reach = np.zeros(0) # the biggest radius of any light in the cube: the cube counts as that much bigger
 
         if len(fixed):
-            cells, cell_of = np.unique(np.floor(self.pos / CELL_SIZE).astype(np.int64), axis=0, return_inverse=True)
+            cells, cell_of = np.unique(np.floor(self.pos / self.cell_size).astype(np.int64), axis=0, return_inverse=True)
             self.cell_of = cell_of.ravel()
-            self.cell_centers = (cells + 0.5) * CELL_SIZE
+            self.cell_centers = (cells + 0.5) * self.cell_size
             self.cell_reach = np.zeros(len(cells))
             np.maximum.at(self.cell_reach, self.cell_of, self.radius)
 
@@ -49,8 +53,11 @@ class LightSet:
         # 1. a light matters if its sphere (its position and radius) touches what the camera can see: it can be behind the camera and still light things in front of it, so being outside the view isn't enough, the whole sphere has to be
         # 2. and it doesn't matter if even the nearest point of that sphere is further away than view_distance, since nothing there is drawn
         # 3. if still more than limit lights matter, the ones that probably light the most of the screen win: bright, big and close to the camera
-        # dt (the time of the frame, in seconds): with it, a light that wins or loses a place in 3 doesn't switch on or off but fades over FADE_TIME (and a light that is already in has to be a bit worse than a newcomer to lose its place),
-        # otherwise lights flicker when the camera moves and the ranking changes; without it every light that is picked has its whole intensity
+        # dt (the time of the frame, in seconds): with it, a light that wins or loses a place in 3 doesn't switch on or off but fades over fade_time (and a light that is already in has to be stickiness times worse than a newcomer to lose its place),
+        # otherwise lights flicker when the camera moves and the ranking changes; without it (or with a fade_time of 0) every light that is picked has its whole intensity
+        if self.fade_time <= 0:
+            dt = None
+
         chosen = self.follow[:limit]
         weights = [1.0] * len(chosen)
         self.relevant = len(self.follow)
@@ -61,7 +68,7 @@ class LightSet:
 
             # first the cubes (a few hundred instead of all the lights): the same tests, with the cube made as much bigger as its biggest light
             # if the sphere of a light touches the view then so does its cube made bigger by that radius, so no light that matters is lost here
-            half = CELL_SIZE / 2
+            half = self.cell_size / 2
             margin = self.cell_centers @ normals.T + planes[:, 3] + half * np.abs(normals).sum(axis=1) + self.cell_reach[:, None]
             cells = (margin >= 0).all(axis=1)
 
@@ -118,8 +125,8 @@ class LightSet:
     def fade_in_out(self, lights, score, room, dt):
         # lights: the fixed lights that matter (their indices); score: how much each of them matters, only given if there are more than room of them
         # returns the lights to send and their weights: the best ones, those that stay get to full weight, newcomers fade in, those that lost their place fade out for a while in a few places kept free for that
-        # only that many lights may lose their place at a time (the places kept free for fading out): if the ranking changes more than that in one frame, the best of the rest keep their place for now and the newcomers that would have taken it wait, so a light never switches off in one frame
-        step = dt / FADE_TIME
+        # only that many lights may lose their place at a time (the places kept free for fading out, fade_share of them): if the ranking changes more than that in one frame, the best of the rest keep their place for now and the newcomers that would have taken it wait, so a light never switches off in one frame
+        step = dt / self.fade_time
         first = not self.fade # nothing was sent before (the first frame): no reason to fade in
         new = {}
 
@@ -130,9 +137,9 @@ class LightSet:
                 else: # one that has only just started to reach something visible has nothing to show yet, so it is there at once; one that was left out for lack of room fades in
                     new[light] = 1.0 if (first or light not in self.matter_before) else step
         else:
-            reserve = room // 8 if room >= 8 else 0 # these places are for lights that are fading out
+            reserve = int(room * self.fade_share) # these places are for lights that are fading out
             keep = room - reserve
-            bonus = np.array([1.3 if light in self.fade else 1.0 for light in lights])
+            bonus = np.array([self.stickiness if light in self.fade else 1.0 for light in lights])
             rank = dict(zip(lights, score * bonus)) # a light that is already in has to be a bit worse than a newcomer to lose its place
             target = [lights[int(i)] for i in np.argpartition(-(score * bonus), keep - 1)[:keep]]
 

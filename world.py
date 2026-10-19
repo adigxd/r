@@ -68,9 +68,9 @@ class GlassChunk:
         self.vertex_count = len(self.faces) * 6
         self.sorted_for = None # where the camera was when the faces were last sorted
 
-    def sort(self, camera_pos):
-        # redone whenever the camera has moved half a block or more since the last time
-        if self.sorted_for is not None and sum((a - b) ** 2 for a, b in zip(camera_pos, self.sorted_for)) <= 0.25:
+    def sort(self, camera_pos, min_move=0.5):
+        # redone whenever the camera has moved min_move blocks or more since the last time (GLASS_SORT_DISTANCE in .env.pre)
+        if self.sorted_for is not None and sum((a - b) ** 2 for a, b in zip(camera_pos, self.sorted_for)) < min_move * min_move:
             return
 
         distance = ((self.centers - np.array(camera_pos, dtype=np.float32)) ** 2).sum(axis=1)
@@ -83,9 +83,10 @@ class GlassChunk:
         glDeleteBuffers(1, [self.vbo])
 
 class World:
-    def __init__(self, seed, tile_size, atlas_size, tile_opacity=None):
+    def __init__(self, seed, tile_size, atlas_size, tile_opacity=None, glass_sort_distance=0.5):
         # tile_opacity: {(col, row): OPAQUE / CUTOUT / TRANSLUCENT} of the tiles of the atlas (see atlas.py); a tile that isn't in it is opaque
         self.seed = seed
+        self.glass_sort_distance = glass_sort_distance # see-through faces are sorted again when the camera has moved this far
         self.tile_size = tile_size
         self.atlas_size = atlas_size
         self.blocks = {} # (x, y, z) : block type
@@ -585,7 +586,7 @@ class World:
 
         for i in visible[np.argsort(-distance, kind='stable')]:
             chunk = self.glass_chunks[i]
-            chunk.sort(camera_pos) # the faces inside a chunk, furthest first
+            chunk.sort(camera_pos, self.glass_sort_distance) # the faces inside a chunk, furthest first
 
             glBindVertexArray(chunk.vao)
             glDrawArrays(GL_TRIANGLES, 0, chunk.vertex_count)

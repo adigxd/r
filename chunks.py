@@ -4,6 +4,12 @@ import numpy as np
 CHUNK_SIZE = 16
 CHUNK_SHIFT = 4 # CHUNK_SIZE = 1 << CHUNK_SHIFT
 
+def set_chunk_size(size):
+    # size: a power of 2 (CHUNK_SIZE in .env.pre); has to be called before the world is built
+    global CHUNK_SIZE, CHUNK_SHIFT
+    CHUNK_SIZE = size
+    CHUNK_SHIFT = size.bit_length() - 1
+
 def chunk_of(x, y, z):
     # which chunk the block at (x, y, z) is in; a chunk is named by the position of its corner divided by CHUNK_SIZE (>> rounds down, also for negative positions)
     return (x >> CHUNK_SHIFT, y >> CHUNK_SHIFT, z >> CHUNK_SHIFT)
