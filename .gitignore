@@ -1,6 +1,10 @@
 git.py
 .env
 
+# the copy rend keeps of a map file before it saves into it, and its temporary file
+maps/*.json.bak
+maps/*.json.tmp
+
 .DS_Store
 Thumbs.db
 desktop.ini

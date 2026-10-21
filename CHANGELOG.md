@@ -1,3 +1,14 @@
+### VER-2.0-20261021172542
+- rend, the editing of the world in the game, and the chat it is typed into:
+  - T opens the chat (JetBrains Mono, `chat.py`), Enter sends, Escape closes, Tab finishes a command name, Up / Down bring back what was sent, Page Up / Page Down scroll; the player stands still and the view doesn't turn while it is open, the physics goes on; a message stays `CHAT_FADE_TIME` seconds when the chat is closed; Right Shift is a letter while typing, not "exit"
+  - a line that starts with `.` is a command (`rend.py`: `.pos1 .pos2 .sel .desel .set .replace .walls .hollow .sphere .cyl .copy .cut .paste .move .stack .undo .redo .save .tp .spawn .coords .clear .help`), anything else is a chat message shown as `<You> text` until there is multiplayer; unknown commands and mistakes are reported in red (with suggestions for a block name that is nearly right)
+  - the selection is drawn in the world as a box (`selection.py`: cyan, orange and blue corners; faint through blocks)
+  - undo / redo of any number of edits (kept compactly, 11 bytes a block, `REND_UNDO_BLOCKS`), limits for one command (`REND_MAX_BLOCKS`)
+  - `.save` puts the edits into the map file as `"edits"`: what every command did, with the numbers worked out (corners, seeds of the random picks), played again after the shapes of the map when it is built, so the saved world is exactly the edited one (tested on 60 random command sequences); the rest of the file is left as it is, the old file is kept as `.bak`, and a file that would lose anything is never written
+- `World.edit(changes)` changes blocks and remakes only the chunks that changed and their neighbours (the vertices of all other chunks are copied inside the graphics card), the mesh is exactly the one a fresh build gives (tested for solid and translucent blocks, also at the borders of chunks); `World.raycast` finds the block you look at
+- A block with several textures (grass, dirt, sand) picks one from its position instead of from the random numbers of the build, so it looks the same whenever its chunk is made again (the look of the textures on the maps changes a little)
+- Settings: `REND_MAX_BLOCKS`, `REND_UNDO_BLOCKS`, `CHAT_FONT`, `CHAT_FONT_SIZE`, `CHAT_LINES`, `CHAT_HISTORY`, `CHAT_FADE_TIME`, `CHAT_WIDTH`, and the shaders `UI_*` and `LINE_*`
+
 ### VER-1.16-20261018215714
 - `COLLISION_STEP` is now 0.375 blocks (was 0.4); all collision and parkour route tests pass with it
 

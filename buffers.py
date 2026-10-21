@@ -49,17 +49,14 @@ def make_post_quad():
 
     return vao, vbo, ebo
 
-def make_block_mesh(vertex_data, dynamic=False):
-    # Buffer for cube mesh data (position + normal + uv)
-    # Vertex format: 8 floats per vertex (x, y, z, nx, ny, nz, u, v)
+def make_block_vao(vbo):
+    # a vertex array that reads the block vertices of vbo
+    # Vertex format: 8 float32 per vertex (x, y, z, nx, ny, nz, u, v)
     vao = glGenVertexArrays(1)
     glBindVertexArray(vao)
-
-    vbo = glGenBuffers(1)
     glBindBuffer(GL_ARRAY_BUFFER, vbo)
-    glBufferData(GL_ARRAY_BUFFER, vertex_data.nbytes, vertex_data, GL_DYNAMIC_DRAW if dynamic else GL_STATIC_DRAW) # dynamic: the data gets replaced often (see update_block_mesh)
 
-    stride = 8 * vertex_data.itemsize
+    stride = 8 * 4
 
     # Position attribute (3 floats)
     # location = 0
@@ -68,19 +65,48 @@ def make_block_mesh(vertex_data, dynamic=False):
 
     # Normal attribute (3 floats, offset 12 bytes)
     # location = 1
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride,
-                         ctypes.c_void_p(3 * vertex_data.itemsize))
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(3 * 4))
     glEnableVertexAttribArray(1)
 
     # Texture coordinate attribute (2 floats, offset 24 bytes)
     # location = 2
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride,
-                         ctypes.c_void_p(6 * vertex_data.itemsize))
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(6 * 4))
     glEnableVertexAttribArray(2)
 
     glBindVertexArray(0)
 
-    return vao, vbo
+    return vao
+
+def make_block_mesh(vertex_data, dynamic=False):
+    # Buffer for cube mesh data (position + normal + uv), 8 float32 per vertex
+    vbo = glGenBuffers(1)
+    glBindBuffer(GL_ARRAY_BUFFER, vbo)
+    glBufferData(GL_ARRAY_BUFFER, vertex_data.nbytes, vertex_data, GL_DYNAMIC_DRAW if dynamic else GL_STATIC_DRAW) # dynamic: the data gets replaced often (see update_block_mesh)
+    glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+    return make_block_vao(vbo), vbo
+
+def make_block_buffer(nbytes):
+    # an empty buffer for block vertices, to be filled with copy_buffer_range / write_buffer_range
+    vbo = glGenBuffers(1)
+    glBindBuffer(GL_ARRAY_BUFFER, vbo)
+    glBufferData(GL_ARRAY_BUFFER, nbytes, None, GL_STATIC_DRAW)
+    glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+    return vbo
+
+def copy_buffer_range(source, target, source_offset, target_offset, nbytes):
+    # copies bytes from one buffer to another inside the graphics card, nothing goes through the cpu
+    glBindBuffer(GL_COPY_READ_BUFFER, source)
+    glBindBuffer(GL_COPY_WRITE_BUFFER, target)
+    glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, source_offset, target_offset, nbytes)
+    glBindBuffer(GL_COPY_READ_BUFFER, 0)
+    glBindBuffer(GL_COPY_WRITE_BUFFER, 0)
+
+def write_buffer_range(vbo, offset, vertex_data):
+    glBindBuffer(GL_ARRAY_BUFFER, vbo)
+    glBufferSubData(GL_ARRAY_BUFFER, offset, vertex_data.nbytes, vertex_data)
+    glBindBuffer(GL_ARRAY_BUFFER, 0)
 
 def update_block_mesh(vbo, vertex_data):
     # replace the vertices of a mesh made with make_block_mesh (same amount, in a different order)

@@ -14,6 +14,7 @@ import time
 import atlas
 import buffers
 from camera import Camera
+from chat import Chat
 import chunks
 import config
 import glsl
@@ -21,9 +22,11 @@ from lights import LightSet
 from loading import LoadingBar, Cancelled
 import log
 import matrices
+import rend
+from selection import SelectionBox
 from ticks import Ticker
 import uniforms
-from world import World
+from world import World, BLOCK_TYPES
 
 # ------
 
@@ -73,6 +76,11 @@ def enable_dpi_awareness():
         log.error('Could not turn on DPI awareness (the game may look blurry on a scaled screen)', error=e)
 
 # ------
+
+class NoKeys:
+    # a keyboard with nothing pressed
+    def __getitem__(self, key):
+        return False
 
 def main(map_name):
     # all settings come from .env.pre / .env and the map file, so they have to load before anything else starts
@@ -169,7 +177,7 @@ def main(map_name):
     world = World(settings.seed, settings.tile_size, settings.atlas_size, atlas.tile_opacities(settings.atlas_path, settings.tile_size, settings.atlas_size), settings.glass_sort_distance)
 
     try:
-        world.build(world_data, loading.update) # build the world from the map file; this will be replaced with dynamic chunk loading and generation based on the player's position in the world, but for now it serves as a simple test case to ensure that the rendering pipeline is working correctly with the block vertex data and texture coordinates from the atlas
+        world.build(world_data, loading.update, settings.edits) # build the world from the map file; this will be replaced with dynamic chunk loading and generation based on the player's position in the world, but for now it serves as a simple test case to ensure that the rendering pipeline is working correctly with the block vertex data and texture coordinates from the atlas
     except Cancelled: # the player closed the game while the map was building
         pygame.mixer.music.stop()
         buffers.delete_framebuffer(fbo, fbo_texture, rbo)
@@ -241,7 +249,42 @@ def main(map_name):
 
     post_vao, post_vbo, post_ebo = buffers.make_post_quad() # post-processing buffer objects for full-screen quad
 
+    # the shaders of the chat and of the box of the selection
+    ui_program = glsl.build_program(glsl.read_source(settings.ui_vertex_shader), glsl.read_source(settings.ui_fragment_shader))
+    line_program = glsl.build_program(glsl.read_source(settings.line_vertex_shader), glsl.read_source(settings.line_fragment_shader))
+
+    if not ui_program or not line_program:
+        pygame.quit()
+        exit()
+
     glUseProgram(block_program)
+
+    # ------
+
+    # rend (the editing of the world) and the chat it is typed into
+    rend_state = rend.Rend(world, BLOCK_TYPES, settings.edits, settings.map_path, settings.rend_max_blocks, settings.rend_undo_blocks)
+    chat = Chat(ui_program, settings.chat_font, settings.chat_font_size, settings.chat_lines, settings.chat_history, settings.chat_fade_time, settings.chat_width, [name for name in rend.HELP])
+    selection_box = SelectionBox(line_program)
+
+    class Player:
+        # what a rend command can ask about the player
+        @property
+        def player(self):
+            # the block the player stands in
+            return (int(np.floor(camera.pos[0])), int(np.floor(camera.pos[1] - camera.height + 1e-4)), int(np.floor(camera.pos[2])))
+
+        def look(self):
+            # the block looked at (within 100 blocks) and the face of it that is hit
+            return world.raycast(camera.pos, matrices.look_direction(camera.rot), 100.0)
+
+        def teleport(self, x, y, z):
+            camera.set_pos([x, y + camera.height + 0.01, z])
+
+        def spawn(self):
+            camera.set_pos(list(settings.start_pos))
+
+    player = Player()
+    chat.add('info', 'T opens the chat, .help lists the rend commands')
 
     # ------
 
@@ -263,8 +306,27 @@ def main(map_name):
 
     while True:
         for event in pygame.event.get():
+            if chat.open and event.type in (pygame.KEYDOWN, pygame.TEXTINPUT, pygame.MOUSEWHEEL): # the chat takes the typing (Right Shift is a letter here, not "exit")
+                if not (event.type == pygame.KEYDOWN and event.key == pygame.K_F11):
+                    line = chat.handle(event)
+
+                    if line is not None:
+                        if line.startswith('.'):
+                            for kind, text in rend_state.run(line, player):
+                                if kind == 'clear':
+                                    chat.clear()
+                                else:
+                                    chat.add(kind, text)
+                        else:
+                            chat.add('chat', f'<You> {line}') # (there is no one else yet)
+
+                    continue
+
             if wants_exit(event):
                 # cleanup and exit
+                if rend_state.unsaved():
+                    log.debug('There are rend edits that were not saved (.save puts them in the map file)', edits=len(rend_state.edits()) - len(rend_state.saved))
+
                 pygame.mixer.music.stop()
 
                 for program in post_programs:
@@ -278,6 +340,9 @@ def main(map_name):
                 pygame.quit()
 
                 return
+
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_t and not chat.open:
+                chat.open_chat()
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
                 # switch between fullscreen and windowed; the window changes size, which the loop below notices and handles
@@ -359,6 +424,10 @@ def main(map_name):
 
         keys = pygame.key.get_pressed() # get the current state of all keyboard buttons
 
+        if chat.open: # typing: the player stands still and the view doesn't turn (gravity goes on)
+            keys = NoKeys()
+            mouse_rel = (0, 0)
+
         camera.look(mouse_rel) # turning happens every frame, so it follows the mouse right away
 
         for _ in range(ticker.advance(frame_time)): # the physics happens in ticks of the same length, as many as the time since the last frame needs (none, one or several)
@@ -402,6 +471,8 @@ def main(map_name):
             glDepthMask(GL_TRUE)
             glDisable(GL_BLEND)
 
+        selection_box.draw(view, projection, rend_state.pos1, rend_state.pos2) # the box of the rend selection is part of the scene (post-processing applies to it)
+
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL) # post-processing quad is always solid
 
         # Post-processing pass
@@ -423,6 +494,8 @@ def main(map_name):
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, None)
 
         glEnable(GL_DEPTH_TEST) # re-enable depth testing
+
+        chat.draw(width, height) # the chat is on top of the finished picture
 
         pygame.display.flip() # update the display with the rendered frame
 

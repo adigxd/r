@@ -6,10 +6,12 @@ import random
 # ./
 from atlas import OPAQUE, TRANSLUCENT
 import buffers
+import chunks
 from chunks import ChunkBoxes, chunk_of
+import rend
 
 # format: "BLOCK_NAME": {"top": (col, row), "side": (col, row), "bottom": (col, row)} or {"all": (col, row)} (if all faces of the block use the same texture)
-# a (col, row) can also be a list of them; one of the list is picked at random for every face
+# a (col, row) can also be a list of them; one of the list is picked for every face (from the position of the block, so a block always looks the same)
 # "AIR" is typically used in map files to represent empty space and is not included here since it doesn't correspond to an actual block type that needs vertex data
 #       it is treated the same way an invalid block type would be (ignored and not added to the vertex array)
 BLOCK_TYPES = {
@@ -95,6 +97,7 @@ class World:
         self.vao = None
         self.vbo = None
         self.vertex_count = 0 # in the whole buffer
+        self.opaque_keys = [] # the chunks in the buffer, in the order of their ranges
         self.opaque_boxes = None # ChunkBoxes of the chunks in the buffer
         self.opaque_first = None # for each of them the first vertex of its range
         self.opaque_count = None # and how many vertices the range has
@@ -113,6 +116,7 @@ class World:
 
         # the translucent blocks are in meshes of their own, one per chunk (see GlassChunk)
         self.glass_chunks = []
+        self.glass_keys = [] # the chunk of every one of them
         self.glass_boxes = None
 
     def set_block(self, x, y, z, block_type):
@@ -170,16 +174,24 @@ class World:
         self.vao = None
         self.vbo = None
         self.vertex_count = 0
+        self.opaque_keys = []
         self.opaque_boxes = None
         self.opaque_first = None
         self.opaque_count = None
         self.glass_chunks = []
+        self.glass_keys = []
         self.glass_boxes = None
 
-    def pick_uvs(self, tile):
-        # tile can be a single (col, row) tuple or a list of tuples for random selection
+    def pick_uvs(self, tile, x, y, z, face):
+        # tile can be a single (col, row) tuple or a list of tuples to pick from: the pick depends on the block and the face only (a hash of them), so a block looks the same every time the mesh is made
         if isinstance(tile, list):
-            return self.tile_uvs(*random.choice(tile))
+            h = ((x * 73856093) ^ (y * 19349663) ^ (z * 83492791) ^ (face * 2654435761)) & 0xFFFFFFFF
+            h ^= h >> 15
+            h = (h * 2246822519) & 0xFFFFFFFF
+            h ^= h >> 13
+
+            return self.tile_uvs(*tile[h % len(tile)])
+
         return self.tile_uvs(*tile)
 
     def tile_uvs(self, col, row):
@@ -236,17 +248,17 @@ class World:
                 t_centers.extend([sum(p[0] for p in pos) / 4, sum(p[1] for p in pos) / 4, sum(p[2] for p in pos) / 4])
 
         if exposed[0]:
-            add_face(pos_front, self.pick_uvs(tiles["front"]), normal_front)
+            add_face(pos_front, self.pick_uvs(tiles["front"], x, y, z, 0), normal_front)
         if exposed[1]:
-            add_face(pos_back, self.pick_uvs(tiles["back"]), normal_back)
+            add_face(pos_back, self.pick_uvs(tiles["back"], x, y, z, 1), normal_back)
         if exposed[2]:
-            add_face(pos_left, self.pick_uvs(tiles["left"]), normal_left)
+            add_face(pos_left, self.pick_uvs(tiles["left"], x, y, z, 2), normal_left)
         if exposed[3]:
-            add_face(pos_right, self.pick_uvs(tiles["right"]), normal_right)
+            add_face(pos_right, self.pick_uvs(tiles["right"], x, y, z, 3), normal_right)
         if exposed[4]:
-            add_face(pos_top, self.pick_uvs(tiles["top"]), normal_top)
+            add_face(pos_top, self.pick_uvs(tiles["top"], x, y, z, 4), normal_top)
         if exposed[5]:
-            add_face(pos_bottom, self.pick_uvs(tiles["bottom"]), normal_bottom)
+            add_face(pos_bottom, self.pick_uvs(tiles["bottom"], x, y, z, 5), normal_bottom)
 
     def rebuild_mesh(self, progress=None):
         # generate vertex data for the entire world, chunk by chunk
@@ -287,6 +299,7 @@ class World:
             parts = [np.frombuffer(builders[chunk][0], dtype=np.float32) for chunk in solid]
             counts = np.array([len(part) // 8 for part in parts], dtype=np.int32) # 8 floats per vertex (position, normal, texcoord)
 
+            self.opaque_keys = solid
             self.opaque_boxes = ChunkBoxes(solid)
             self.opaque_count = counts
             self.opaque_first = np.concatenate(([0], np.cumsum(counts)[:-1])).astype(np.int32)
@@ -297,8 +310,183 @@ class World:
         glass = [chunk for chunk, builder in builders.items() if builder[1]]
 
         if glass:
+            self.glass_keys = glass
             self.glass_boxes = ChunkBoxes(glass)
             self.glass_chunks = [GlassChunk(builders[chunk][1], builders[chunk][2]) for chunk in glass]
+
+    def build_chunk(self, chunk):
+        # the vertex data of one chunk, made from self.blocks: (vertices, translucent vertices, middles of the translucent faces)
+        size = chunks.CHUNK_SIZE
+        x0, y0, z0 = chunk[0] * size, chunk[1] * size, chunk[2] * size
+        builder = (array('f'), array('f'), array('f'))
+        blocks = self.blocks
+
+        for x in range(x0, x0 + size):
+            for y in range(y0, y0 + size):
+                for z in range(z0, z0 + size):
+                    block_type = blocks.get((x, y, z))
+
+                    if block_type is not None:
+                        self.add_block_faces(x, y, z, block_type, *builder)
+
+        return builder
+
+    def edit(self, changes):
+        # changes: {(x, y, z): block type, or None / "AIR" to take the block away}
+        # changes the blocks and then only the chunks of the mesh that are affected: the chunks of the changed blocks and the chunks next to them (a face at the edge of a chunk is covered or not by a block in the next one)
+        # returns how many blocks really changed
+        blocks = self.blocks
+        changed = []
+
+        for pos, block_type in changes.items():
+            if block_type is None or not self.has_geometry(block_type):
+                if blocks.pop(pos, None) is not None:
+                    changed.append(pos)
+            elif blocks.get(pos) != block_type:
+                blocks[pos] = block_type
+                changed.append(pos)
+
+        if not changed or self.dirty: # (a mesh that is not built yet will have these blocks when it is)
+            return len(changed)
+
+        shift = chunks.CHUNK_SHIFT
+        positions = np.array(changed, dtype=np.int64)
+        base = positions >> shift
+        touched = [base]
+
+        for axis in range(3):
+            for step in (-1, 1):
+                moved = positions.copy()
+                moved[:, axis] += step
+                moved >>= shift
+                other = (moved != base).any(axis=1)
+
+                if other.any():
+                    touched.append(moved[other])
+
+        self.refresh_chunks({tuple(chunk) for chunk in np.unique(np.concatenate(touched), axis=0).tolist()})
+
+        return len(changed)
+
+    def refresh_chunks(self, dirty):
+        # makes the mesh of the chunks in dirty again from self.blocks; the vertices of all the other chunks are copied inside the graphics card
+        built = {chunk: self.build_chunk(chunk) for chunk in dirty}
+
+        # the solid chunks: the new buffer is the old runs that are still good (copied), then the new vertices of the changed chunks
+        old_keys, old_first, old_count = self.opaque_keys, self.opaque_first, self.opaque_count
+        old_vao, old_vbo = self.vao, self.vbo
+        keys = [] # the chunks of the new buffer, in order
+        counts = [] # and how many vertices each has
+        copies = [] # (first vertex in the old buffer, first vertex in the new one, how many): chunks next to each other in both are one run
+        at = 0 # the next free vertex of the new buffer
+
+        for i, chunk in enumerate(old_keys):
+            if chunk in built:
+                continue
+
+            first, count = int(old_first[i]), int(old_count[i])
+            keys.append(chunk)
+            counts.append(count)
+
+            if copies and copies[-1][0] + copies[-1][2] == first and copies[-1][1] + copies[-1][2] == at:
+                copies[-1] = (copies[-1][0], copies[-1][1], copies[-1][2] + count)
+            else:
+                copies.append((first, at, count))
+
+            at += count
+
+        fresh = [] # (first vertex in the new buffer, the vertices)
+
+        for chunk in sorted(built):
+            data = np.frombuffer(built[chunk][0], dtype=np.float32)
+
+            if len(data):
+                keys.append(chunk)
+                counts.append(len(data) // 8)
+                fresh.append((at, data))
+                at += len(data) // 8
+
+        if at:
+            vbo = buffers.make_block_buffer(at * 32) # 8 float32 per vertex
+
+            for first, target, count in copies:
+                buffers.copy_buffer_range(old_vbo, vbo, first * 32, target * 32, count * 32)
+
+            for target, data in fresh:
+                buffers.write_buffer_range(vbo, target * 32, data)
+
+            self.vbo = vbo
+            self.vao = buffers.make_block_vao(vbo)
+            self.vertex_count = at
+            self.opaque_keys = keys
+            self.opaque_boxes = ChunkBoxes(keys)
+            self.opaque_count = np.array(counts, dtype=np.int32)
+            self.opaque_first = np.concatenate(([0], np.cumsum(self.opaque_count)[:-1])).astype(np.int32)
+        else:
+            self.vao = self.vbo = None
+            self.vertex_count = 0
+            self.opaque_keys = []
+            self.opaque_boxes = self.opaque_first = self.opaque_count = None
+
+        if old_vao is not None:
+            glDeleteVertexArrays(1, [old_vao])
+        if old_vbo is not None:
+            glDeleteBuffers(1, [old_vbo])
+
+        # the translucent chunks have a buffer each, so only those of the changed chunks are made again
+        glass = dict(zip(self.glass_keys, self.glass_chunks))
+
+        for chunk in dirty:
+            old = glass.pop(chunk, None)
+
+            if old is not None:
+                old.free()
+
+            if len(built[chunk][1]):
+                glass[chunk] = GlassChunk(built[chunk][1], built[chunk][2])
+
+        self.glass_keys = sorted(glass)
+        self.glass_chunks = [glass[key] for key in self.glass_keys]
+        self.glass_boxes = ChunkBoxes(self.glass_keys) if self.glass_keys else None
+
+    def raycast(self, origin, direction, max_distance):
+        # the first block a ray from origin along direction hits within max_distance: ((x, y, z) of the block, (nx, ny, nz) the face it was hit on), or None
+        # steps from block to block along the ray (Amanatides and Woo)
+        ox, oy, oz = origin
+        dx, dy, dz = direction
+        length = (dx * dx + dy * dy + dz * dz) ** 0.5
+
+        if length == 0:
+            return None
+
+        dx, dy, dz = dx / length, dy / length, dz / length
+        x, y, z = int(np.floor(ox)), int(np.floor(oy)), int(np.floor(oz))
+        step = (1 if dx > 0 else -1, 1 if dy > 0 else -1, 1 if dz > 0 else -1)
+        inf = float('inf')
+        t_max = [
+            ((x + (step[0] > 0)) - ox) / dx if dx else inf,
+            ((y + (step[1] > 0)) - oy) / dy if dy else inf,
+            ((z + (step[2] > 0)) - oz) / dz if dz else inf,
+        ]
+        t_delta = [abs(1 / dx) if dx else inf, abs(1 / dy) if dy else inf, abs(1 / dz) if dz else inf]
+        cell = [x, y, z]
+        normal = (0, 0, 0)
+
+        if (x, y, z) in self.blocks:
+            return (x, y, z), normal # the origin is inside a block
+
+        while True:
+            axis = t_max.index(min(t_max))
+
+            if t_max[axis] > max_distance:
+                return None
+
+            cell[axis] += step[axis]
+            t_max[axis] += t_delta[axis]
+            normal = tuple(-step[axis] if a == axis else 0 for a in range(3))
+
+            if tuple(cell) in self.blocks:
+                return tuple(cell), normal
 
     def pick_block_type(self, choices):
         # choices can be a list (equal chance) or a dict {"TYPE": weight} for weighted selection
@@ -472,9 +660,10 @@ class World:
                         height = random.randint(height_avg - height_err, height_avg + height_err)
                         self.add_tree(x + x_off, y, z + z_off, height, tree_type)
 
-    def build(self, world_data, progress=None):
+    def build(self, world_data, progress=None, edits=None):
         # build the world from the "world" object of a map file (loaded by config.load)
         # progress, if given, is called now and then with how far along the build is (0 to 1), for a loading bar
+        # edits: the "edits" of the map file (see rend.py), played on the blocks after all the shapes
         random.seed(self.seed)
 
         self.blocks = {}
@@ -542,6 +731,9 @@ class World:
                 forest['x'], forest['y'], forest['z'], forest['radius'], forest['height_avg'], forest['height_err'], forest['density'], forest['shape'], forest['type']
             )
             placed()
+
+        if edits:
+            rend.replay(self.blocks, edits)
 
         mesh_progress = (lambda fraction: progress(shapes_share + (1 - shapes_share) * fraction)) if progress else None
         self.rebuild_mesh(mesh_progress)

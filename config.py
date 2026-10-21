@@ -6,6 +6,7 @@ from dotenv import dotenv_values
 
 # ./
 import log
+import rend
 
 # directory the map files live in
 MAPS_DIR = './maps'
@@ -181,6 +182,14 @@ ENV_SETTINGS = {
     'LIGHT_FADE_SHARE': half_or_less,
     'LIGHT_STICKINESS': at_least_one,
     'LIGHT_CELL_SIZE': positive_int,
+    'REND_MAX_BLOCKS': positive_int,
+    'REND_UNDO_BLOCKS': positive_int,
+    'CHAT_FONT': str,
+    'CHAT_FONT_SIZE': positive_int,
+    'CHAT_LINES': positive_int,
+    'CHAT_HISTORY': positive_int,
+    'CHAT_FADE_TIME': positive,
+    'CHAT_WIDTH': fraction,
     'CHUNK_SIZE': power_of_two,
     'GLASS_SORT_DISTANCE': positive,
     'LOADING_BAR_FPS': positive_int,
@@ -199,6 +208,10 @@ ENV_SETTINGS = {
     'BLOCK_VERTEX_SHADER': str,
     'BLOCK_FRAGMENT_SHADER': str,
     'POST_VERTEX_SHADER': str,
+    'UI_VERTEX_SHADER': str,
+    'UI_FRAGMENT_SHADER': str,
+    'LINE_VERTEX_SHADER': str,
+    'LINE_FRAGMENT_SHADER': str,
     'POST_FRAGMENT_SHADERS': env_path_list,
 
     'SCREENSHOT_DIR': str,
@@ -261,7 +274,7 @@ LIGHTING_OPTIONAL = {
     'per_block': (flag, True), # true: every block is lit as a whole (from its middle); false: every pixel is lit separately
 }
 
-MAP_KEYS = ['name', 'description', 'config', 'lights', 'lighting', 'world']
+MAP_KEYS = ['name', 'description', 'config', 'lights', 'lighting', 'world', 'edits'] # (edits are made and saved by rend, see rend.py)
 
 # ------
 
@@ -363,6 +376,14 @@ def load_map(map_path, errors):
     lighting['face_shade'] = [face_shade[side] for side in ('top', 'bottom', 'front', 'back', 'left', 'right')] # the order the shader expects
     settings['lighting'] = SimpleNamespace(**lighting)
 
+    # edits (made in the game with rend and saved with .save): checked here, played by World.build
+    from world import BLOCK_TYPES
+
+    edits = map_data.get('edits', [])
+    problems = rend.validate_edits(edits, set(BLOCK_TYPES) | {rend.AIR})
+    errors.extend(problems)
+    settings['edits'] = [] if problems else edits
+
     return settings, map_data.get('world', {})
 
 def load(map_name):
@@ -381,5 +402,6 @@ def load(map_name):
         return None, None
 
     settings.update(map_settings)
+    settings['map_path'] = map_path # where rend saves the edits
 
     return SimpleNamespace(**settings), world_data

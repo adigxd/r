@@ -24,12 +24,13 @@ python r.py [map]
 | Right mouse button | Hold to increase movement speed |
 | Space | Fly up in debug mode; jump in normal mode |
 | Left Shift | Fly down in debug mode |
-| Escape / Backspace | Back to the spawn of the map |
+| Escape / Backspace | Back to the spawn of the map (Escape closes the chat first, if it is open) |
+| T | Open the chat (Enter sends, Escape closes, Tab finishes a command name, Up / Down bring back what you sent, Page Up / Page Down scroll) |
 | F11 | Toggle fullscreen |
 | Backslash (`\`) | Cycle post-processing shader |
 | Backquote (`` ` ``) | Save screenshot |
 | Right Ctrl | Toggle wireframe debug mode |
-| Right Shift | Exit |
+| Right Shift | Exit (not while the chat is open: it is a letter there) |
 
 Alt-tabbing away doesn't close the game: it keeps running, lets go of the mouse, and takes it back when you come back.
 
@@ -103,13 +104,29 @@ If a setting is missing or has a typo, the game says which one and exits.
 | `glsl.py` | Shader loading and compiling |
 | `lights.py` | Picks the lights that matter every frame (a map can have any number) |
 | `loading.py` | The loading bar shown while the map builds |
+| `rend.py` | The editing commands (`.set`, `.undo`, ...), what they do to the blocks, undo / redo and saving the edits into the map file |
+| `chat.py` | The chat: typing, messages and drawing them (in JetBrains Mono) |
+| `selection.py` | Draws the box of the rend selection |
 | `uniforms.py` | Shader uniform values (matrices, lights, ...) |
 | `log.py` | Console logging |
 | `.env.pre` | Default settings for every map |
 | `maps/` | Map files (their settings, lights and blocks) |
 | `shaders/` | GLSL shaders (`block.*` for the world, `post_*.frag` for post-processing) |
-| `resources/` | Texture atlas, window icon, music |
+| `resources/` | Texture atlas, window icon, music, the chat font |
 | `CHANGELOG.md` | Version history |
+
+### Rend (editing the world in the game):
+
+Press T and type a command that starts with a `.` (anything else you send is a chat message, shown as `<You> ...` until there is multiplayer). `.help` lists the commands, `.help <command>` explains one.
+
+- **Selecting:** `.pos1` and `.pos2` set the two corners, with nothing after them to the block you stand in, with `look` to the block you look at, or with `x y z` (`~` is relative to you, `~5` is 5 away). The box shows in the world (cyan; orange and blue corners). `.sel` says what is selected, `.desel` forgets it.
+- **Blocks:** `STONE`, `STONE,DIRT` (equal chances) or `GRASS:60,STONE_LIGHT:1` (weights); `AIR` takes blocks away. Names are not case sensitive, a wrong one gets suggestions.
+- **Changing:** `.set <blocks>`, `.replace <from> <to>` (`*` is every block), `.walls <blocks>`, `.hollow`, `.sphere <blocks> <radius> [hollow] [at x y z]`, `.cyl <blocks> <radius> <height> [hollow] [at x y z]`.
+- **Copying:** `.copy`, `.cut`, `.paste [noair]` (put down relative to where you stand), `.move <distance> <direction>` or `.move dx dy dz`, `.stack <count> [direction]` (directions: up, down, north, south, east, west; north is the way you face at the start).
+- **Undo:** `.undo [n]` and `.redo [n]` go through everything you changed; a new edit throws the redo steps away. Undo remembers as many blocks as `REND_UNDO_BLOCKS` allows, the oldest steps are forgotten first.
+- **Other:** `.tp x y z`, `.spawn`, `.coords`, `.clear`.
+- **Keeping edits:** `.save` puts everything you did into the map file as `"edits"` (a short list of what each command did, not all the blocks), so `python r.py <map>` builds the same world next time; the file keeps everything else as it was, and the old one is kept next to it as `<map>.json.bak`. Edits that are loaded from the map are part of the map (you can't `.undo` them); edits that are not saved are lost when you quit (the console says so).
+- A command that would change more than `REND_MAX_BLOCKS` blocks does nothing and says so. Editing only remakes the chunks that changed, so it stays quick on big maps (13,000 blocks: a fifth of a second; 1,500,000: about 2 seconds).
 
 ### Atlas:
 

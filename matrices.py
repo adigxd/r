@@ -70,6 +70,13 @@ def view_matrix(cam_pos, cam_rot):
     # Combine rotation and translation
     return rotation @ translation
 
+def look_direction(cam_rot):
+    # the direction the camera looks in, from [pitch, yaw] in degrees (the same as in view_matrix)
+    pitch = np.radians(cam_rot[0])
+    yaw = np.radians(cam_rot[1])
+
+    return (np.sin(yaw) * np.cos(pitch), np.sin(pitch), -np.cos(yaw) * np.cos(pitch))
+
 def projection_matrix(fov, aspect, near, far):
     # Convert field of view from degrees to radians
     fov_rad = np.radians(fov)
