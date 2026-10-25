@@ -113,11 +113,12 @@ If a setting is missing or has a typo, the game says which one and exits.
 | `maps/` | Map files (their settings, lights and blocks) |
 | `shaders/` | GLSL shaders (`block.*` for the world, `post_*.frag` for post-processing) |
 | `resources/` | Texture atlas, window icon, music, the chat font |
+| `COMMANDS.md` | Guide to every rend command, with examples |
 | `CHANGELOG.md` | Version history |
 
 ### Rend (editing the world in the game):
 
-Press T and type a command that starts with a `.` (anything else you send is a chat message, shown as `<You> ...` until there is multiplayer). `.help` lists the commands, `.help <command>` explains one.
+Press T and type a command that starts with a `.` (anything else you send is a chat message, shown as `<You> ...` until there is multiplayer). `.help` lists the commands, `.help <command>` explains one. **[COMMANDS.md](COMMANDS.md) has a guide with examples for every command.**
 
 - **Selecting:** `.pos1` and `.pos2` set the two corners, with nothing after them to the block you stand in, with `look` to the block you look at, or with `x y z` (`~` is relative to you, `~5` is 5 away). The box shows in the world (cyan; orange and blue corners). `.sel` says what is selected, `.desel` forgets it.
 - **Blocks:** `STONE`, `STONE,DIRT` (equal chances) or `GRASS:60,STONE_LIGHT:1` (weights); `AIR` takes blocks away. Names are not case sensitive, a wrong one gets suggestions.

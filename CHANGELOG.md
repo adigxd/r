@@ -1,3 +1,6 @@
+### VER-2.1-20261024204549
+- `COMMANDS.md`: a guide to every rend command (what it does, every form it takes, examples, and what its answers and mistakes mean); all 122 example commands in it were run to check that they work as written
+
 ### VER-2.0-20261021172542
 - rend, the editing of the world in the game, and the chat it is typed into:
   - T opens the chat (JetBrains Mono, `chat.py`), Enter sends, Escape closes, Tab finishes a command name, Up / Down bring back what was sent, Page Up / Page Down scroll; the player stands still and the view doesn't turn while it is open, the physics goes on; a message stays `CHAT_FADE_TIME` seconds when the chat is closed; Right Shift is a letter while typing, not "exit"
