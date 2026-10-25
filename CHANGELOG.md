@@ -1,3 +1,6 @@
+### VER-2.2-20261024222706
+- New map `heaven` (`python r.py heaven`): bright, abstract, no music; flat and hilly ground, big flat quartz fields, stepped platforms, a long roof on pillars, spires, two huge arches crossing over the middle, beams between the spires, floating islands, clouds and a ring in the sky, 57 pastel lights; exactly mirrored in x and in z (checked block by block: 970,000 blocks, none without its mirror image; the lights too)
+
 ### VER-2.1-20261024204549
 - `COMMANDS.md`: a guide to every rend command (what it does, every form it takes, examples, and what its answers and mistakes mean); all 122 example commands in it were run to check that they work as written
 
