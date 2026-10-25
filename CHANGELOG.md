@@ -1,3 +1,6 @@
+### VER-2.3-20261024222808
+- `python r.py` with no map now starts `heaven` (it was `parkour`; `python r.py parkour` still gives that)
+
 ### VER-2.2-20261024222706
 - New map `heaven` (`python r.py heaven`): bright, abstract, no music; flat and hilly ground, big flat quartz fields, stepped platforms, a long roof on pillars, spires, two huge arches crossing over the middle, beams between the spires, floating islands, clouds and a ring in the sky, 57 pastel lights; exactly mirrored in x and in z (checked block by block: 970,000 blocks, none without its mirror image; the lights too)
 

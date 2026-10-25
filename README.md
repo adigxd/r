@@ -11,7 +11,7 @@ pip install -r requirements.txt
 python r.py [map]
 ```
 
-`map` is a file in `maps` (with or without `.json`); default is `parkour` (see below); `1` is a bright daytime world to explore (meadow, temple, village, forests, desert, mountain, lighthouse and a floating island you can walk up to by the staircase). While a map builds, a loading bar fills in the window.
+`map` is a file in `maps` (with or without `.json`); default is `heaven` (see below); `parkour` is the bunny hop playground and `1` is a bright daytime world to explore (meadow, temple, village, forests, desert, mountain, lighthouse and a floating island you can walk up to by the staircase). While a map builds, a loading bar fills in the window.
 
 `python r.py heaven` is a bright abstract world with no music: flat and hilly ground, large quartz fields, spires, two huge arches and a ring in the sky, mirrored in x and in z (every quarter is a reflection of the others).
 

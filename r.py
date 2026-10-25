@@ -501,7 +501,7 @@ def main(map_name):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='r')
-    parser.add_argument('map', nargs='?', default='parkour', help='map file in maps/, with or without .json; it also holds this map\'s settings (default: parkour)')
+    parser.add_argument('map', nargs='?', default='heaven', help='map file in maps/, with or without .json; it also holds this map\'s settings (default: heaven)')
     args = parser.parse_args()
 
     main(args.map)
