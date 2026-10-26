@@ -7,7 +7,7 @@ rend is the world editing of the game. You type commands into the chat.
 - Command names are not case sensitive (`.SET` is `.set`). Block names are not case sensitive either.
 - Answers come back in the chat: **green** = it worked, **grey** = information, **red** = a mistake (nothing was changed).
 
-Typing helpers: **Tab** finishes a command name (or lists the ones that match), **Up / Down** bring back what you sent before, **Left / Right / Home / End** move in the line (hold **Ctrl** to jump a word, also with Backspace and Delete), **Ctrl+V** pastes, **Page Up / Page Down** (or the mouse wheel) scroll the chat. While the chat is open you stand still and the view does not turn (gravity still works).
+Typing helpers: **Tab** finishes a command name (or lists the ones that match), **Up / Down** bring back what you sent before, **Left / Right / Home / End** move in the line (hold **Ctrl** to jump a word, also with Backspace and Delete), **Ctrl+V** pastes, **Page Up / Page Down** (or the mouse wheel) scroll the chat. A line that is longer than the chat is wide goes on in more rows (the box grows upwards, the text keeps its size). While the chat is open you stand still and the view does not turn (gravity still works).
 
 Contents: [the basics](#the-basics) · [selecting](#selecting) · [changing blocks](#changing-blocks) · [shapes](#shapes) · [copying and moving](#copying-and-moving) · [undo, redo and saving](#undo-redo-and-saving) · [moving yourself](#moving-yourself) · [other](#other) · [recipes](#recipes) · [messages and what they mean](#messages-and-what-they-mean)
 

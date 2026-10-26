@@ -1,3 +1,6 @@
+### VER-2.4-20261025233333
+- Fix: a long line in the chat was squeezed thin to fit the box while typing; now it goes on in more rows (the box grows upwards, breaking after a space when it can), the text keeps its size, and the caret is in the right row
+
 ### VER-2.3-20261024222808
 - `python r.py` with no map now starts `heaven` (it was `parkour`; `python r.py parkour` still gives that)
 

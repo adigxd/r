@@ -37,6 +37,7 @@ class Chat:
         self.ignore_text = None # (text, until): the letter that opened the chat arrives as typing too, and must not be in the line
         self.fonts = {}
         self.textures = {} # (size, text) -> (texture, width, height)
+        self.wrap_memory = None # (what was asked, the rows) of the last wrap_input
 
         if program is not None:
             self.vao = glGenVertexArrays(1)
@@ -282,6 +283,40 @@ class Chat:
 
         return rows
 
+    def wrap_input(self, text, font, max_width):
+        # the rows of the line being typed, as (start, end) places in the text that together are all of it: a row breaks after a space when there is one in it, otherwise in the middle of the word
+        # (remembered, because the same line is asked for every frame)
+        key = (text, max_width, id(font))
+
+        if self.wrap_memory is not None and self.wrap_memory[0] == key:
+            return self.wrap_memory[1]
+
+        rows = []
+        start = 0
+
+        while True:
+            i = start
+            last_space = -1
+
+            while i < len(text) and font.size(text[start:i + 1])[0] <= max_width:
+                i += 1
+
+                if text[i - 1] == ' ':
+                    last_space = i
+
+            if i >= len(text):
+                rows.append((start, len(text)))
+
+                break
+
+            end = last_space if last_space > start else max(i, start + 1)
+            rows.append((start, end))
+            start = end
+
+        self.wrap_memory = (key, rows)
+
+        return rows
+
     def quad(self, x, y, w, h, color, texture=None):
         # a rectangle in pixels from the top left; with a texture it is the picture of some text
         data = np.array([x, y, 0, 0, x + w, y, 1, 0, x + w, y + h, 1, 1, x, y, 0, 0, x + w, y + h, 1, 1, x, y + h, 0, 1], dtype=np.float32)
@@ -306,7 +341,8 @@ class Chat:
         margin = max(6, round(12 * scale))
         box_w = max(320, round(width * self.width))
         text_w = box_w - 2 * pad
-        input_h = line_h + 2 * pad
+        input_rows = self.wrap_input(self.text, font, text_w) if self.open else [(0, 0)] # a long line being typed goes on in more rows (the box grows upwards), it is never squeezed
+        input_h = len(input_rows) * line_h + 2 * pad
         rows = [] # (kind, text, alpha), newest first
 
         want = self.lines * 2 if self.open else self.lines
@@ -357,13 +393,15 @@ class Chat:
             self.quad(margin, y, box_w, input_h, (0, 0, 0, 0.7))
             color = COLORS['command'] if self.text.startswith('.') else COLORS['chat']
 
-            if self.text:
-                texture, tw, th = self.texture(size, self.text)
-                self.quad(margin + pad, y + pad, min(tw, text_w), th, (*color, 1.0), texture)
+            for i, (start, end) in enumerate(input_rows):
+                if end > start:
+                    texture, tw, th = self.texture(size, self.text[start:end])
+                    self.quad(margin + pad, y + pad + i * line_h, tw, th, (*color, 1.0), texture)
 
             if int(now * 2) % 2 == 0: # the caret blinks
-                caret_x = margin + pad + font.size(self.text[:self.cursor])[0]
-                self.quad(caret_x, y + pad, max(2, round(2 * scale)), line_h, (1, 1, 1, 0.9))
+                caret_row = max(i for i, (start, end) in enumerate(input_rows) if start <= self.cursor)
+                caret_x = margin + pad + font.size(self.text[input_rows[caret_row][0]:self.cursor])[0]
+                self.quad(caret_x, y + pad + caret_row * line_h, max(2, round(2 * scale)), line_h, (1, 1, 1, 0.9))
 
         glBindVertexArray(0)
         glDisable(GL_BLEND)
