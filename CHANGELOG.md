@@ -1,3 +1,6 @@
+### VER-3.2-20261029141738
+- Escape closes the menu of effects too (while a line is being typed in it, the first Escape only leaves the line); `]` still opens and closes it
+
 ### VER-3.1-20261029011146
 - Only Backspace puts the player back at the spawn; Escape no longer does (it still closes the chat)
 

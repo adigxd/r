@@ -30,7 +30,7 @@ python r.py [map]
 | T | Open the chat (Enter sends, Escape closes, Tab finishes a command name, Up / Down bring back what you sent, Page Up / Page Down scroll) |
 | F11 | Toggle fullscreen |
 | Backslash (`\`) | Next shader (Shift + Backslash: the previous one), round and round: the built-in ones, then yours |
-| `]` | Open / close the menu of effects (the mouse becomes a pointer while it is open) |
+| `]` | Open / close the menu of effects (Escape closes it too; the mouse becomes a pointer while it is open) |
 | Backquote (`` ` ``) | Save screenshot |
 | Right Ctrl | Toggle wireframe debug mode |
 | Right Shift | Exit (not while the chat is open: it is a letter there) |

@@ -49,7 +49,7 @@ Sizes in pixels (the size of a dither pixel, the width of an outline, the radius
 
 ## The menu (`]`)
 
-A black panel on the right (`GUI_WIDTH`, `GUI_ALPHA` and `GUI_FONT_SIZE` in `.env.pre`); the mouse becomes a pointer while it is open and the view does not turn (you can still walk, unless you are typing in one of its lines). The panel has three tabs:
+A black panel on the right (`GUI_WIDTH`, `GUI_ALPHA` and `GUI_FONT_SIZE` in `.env.pre`); `]` or **Escape** closes it (while a line is being typed, Escape only leaves the line, the next one closes the menu); the mouse becomes a pointer while it is open and the view does not turn (you can still walk, unless you are typing in one of its lines). The panel has three tabs:
 
 - **stack**: the effects on the screen, the top of the list is the top of the stack. Click an effect to open its settings. Buttons on every effect: switch on / off, up, down, copy, remove. A setting is a line to drag (click the number to type one, **right click** puts it back, **Shift + wheel** changes it a little), a yes / no to click, a list to click through (right click goes back), a color (click the swatch for red, green and blue lines, click the number to type a color) or a point (two lines). Also: expand / collapse all, clear, undo, redo and the speed of the animations.
 - **add**: every effect with what it does; type in the search line or pick a category; click one to put it on top of the stack.

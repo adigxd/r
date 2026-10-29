@@ -1,0 +1,6 @@
+{
+  "name": "0",
+  "effects": [
+    {"effect": "edge", "params": {"strength": 9.24, "threshold": 0.264, "softness": 0.797, "color": [0.985, 0.975, 0.904], "keep": 1.0, "width": 1.261, "skip_bright": 0.893}}
+  ]
+}

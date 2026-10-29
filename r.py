@@ -349,7 +349,7 @@ def main(map_name):
 
                     continue
 
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHTBRACKET and not chat.open and not gui.typing():
+            if event.type == pygame.KEYDOWN and not chat.open and not gui.typing() and (event.key == pygame.K_RIGHTBRACKET or (event.key == pygame.K_ESCAPE and gui.open)): # ] opens and closes the menu, Escape closes it (while a line is being typed Escape only cancels the line)
                 gui.toggle()
                 apply_mouse()
                 camera.set_speed(settings.speed) # (a mouse button let go while the menu was in the way would leave sprinting on)
