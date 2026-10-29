@@ -1,0 +1,214 @@
+{
+  "shaders": [
+    {"name": "default", "description": "the picture as it is", "effects": []},
+    {"name": "edge", "description": "the edges of everything in blue on black (the first edge shader)", "effects": [
+      {"effect": "edge", "params": {"method": "sobel", "source": "luma", "strength": 1.0, "threshold": 0.0, "color": [0.0, 0.0, 1.0], "background": [0.0, 0.0, 0.0], "keep": 0.0, "width": 1.0, "skip_bright": 0.9375}}
+    ]},
+    {"name": "dither", "description": "only two colors, drawn with an 8x8 Bayer pattern (the first dither shader)", "effects": [
+      {"effect": "dither", "params": {"type": "bayer8", "levels": 2, "size": 2.0, "mode": "mono", "dark": [0.0, 0.0, 0.0625], "light": [1.0, 1.0, 0.9375], "contrast": 0.6, "black": 0.01, "luma": "rec601"}}
+    ]},
+    {"name": "noise", "description": "black and white grain: every pixel is compared with a random number (the first noise shader)", "effects": [
+      {"effect": "dither", "params": {"type": "noise", "levels": 2, "size": 1.0, "mode": "mono", "dark": [0.0, 0.0, 0.0], "light": [1.0, 1.0, 1.0], "contrast": 1.0, "black": 0.0, "luma": "average"}}
+    ]},
+
+    {"name": "cinematic", "description": "a film look: teal shadows, warm lights, wide bars, a little grain", "effects": [
+      {"effect": "contrast", "params": {"amount": 1.15}},
+      {"effect": "splittone", "params": {"shadow": [0.05, 0.3, 0.4], "highlight": [1.0, 0.7, 0.4], "strength": 0.6}},
+      {"effect": "vignette", "params": {"amount": 0.4}},
+      {"effect": "grain", "params": {"amount": 0.06}},
+      {"effect": "letterbox", "params": {"ratio": 2.39}}
+    ]},
+    {"name": "noir", "description": "black and white, hard contrast, dark corners, grain", "effects": [
+      {"effect": "grayscale"},
+      {"effect": "contrast", "params": {"amount": 1.6}},
+      {"effect": "vignette", "params": {"amount": 0.7}},
+      {"effect": "grain", "params": {"amount": 0.18}}
+    ]},
+    {"name": "sepia", "description": "an old brown photograph", "effects": [
+      {"effect": "sepia"},
+      {"effect": "vignette", "params": {"amount": 0.45}},
+      {"effect": "grain", "params": {"amount": 0.08}}
+    ]},
+    {"name": "old-film", "description": "an old film: brown, grainy, flickering, a little shaky", "effects": [
+      {"effect": "sepia", "params": {"strength": 0.7}},
+      {"effect": "contrast", "params": {"amount": 1.2}},
+      {"effect": "shake", "params": {"amount": 2.0, "rotation": 0.1, "rate": 12.0}},
+      {"effect": "pulse", "params": {"rate": 12.0, "depth": 0.07, "shape": "square"}},
+      {"effect": "grain", "params": {"amount": 0.3, "size": 2.0, "rate": 18.0}},
+      {"effect": "vignette", "params": {"amount": 0.65}}
+    ]},
+    {"name": "dusk", "description": "warm orange light fading to purple, with a soft glow", "effects": [
+      {"effect": "temperature", "params": {"warmth": 0.3}},
+      {"effect": "gradient", "params": {"start": [0.25, 0.1, 0.5], "end": [1.0, 0.55, 0.2], "angle": 90.0, "blend": "softlight", "opacity": 0.8}},
+      {"effect": "bloom", "params": {"threshold": 0.7, "intensity": 0.7}},
+      {"effect": "vignette", "params": {"amount": 0.4}}
+    ]},
+    {"name": "dream", "description": "soft, glowing and a little warm, with light leaking in", "effects": [
+      {"effect": "softfocus", "params": {"radius": 10.0, "strength": 0.7, "glow": 0.35}},
+      {"effect": "bloom", "params": {"threshold": 0.6, "intensity": 0.6, "radius": 30.0}},
+      {"effect": "temperature", "params": {"warmth": 0.2}},
+      {"effect": "saturation", "params": {"amount": 1.2}},
+      {"effect": "lightleak", "params": {"amount": 0.3}}
+    ]},
+
+    {"name": "crt", "description": "an old tube screen: bent glass, scanlines, a red-green-blue mask, a little glow", "effects": [
+      {"effect": "chromatic", "params": {"amount": 0.6}},
+      {"effect": "bloom", "params": {"threshold": 0.75, "intensity": 0.5, "radius": 10.0}},
+      {"effect": "shadowmask", "params": {"size": 4.0, "strength": 0.4}},
+      {"effect": "scanlines", "params": {"strength": 0.3}},
+      {"effect": "curvature", "params": {"amount": 0.25, "corner": 0.06}},
+      {"effect": "vignette", "params": {"amount": 0.5}}
+    ]},
+    {"name": "vhs", "description": "a worn video tape", "effects": [
+      {"effect": "vhs"},
+      {"effect": "chromatic", "params": {"amount": 1.2, "mode": "linear"}},
+      {"effect": "scanlines", "params": {"strength": 0.15}}
+    ]},
+    {"name": "gameboy", "description": "four shades of green on a tiny screen", "effects": [
+      {"effect": "pixelate", "params": {"size": 7.5}},
+      {"effect": "palette", "params": {"palette": "gameboy", "dither": 0.5}},
+      {"effect": "vignette", "params": {"amount": 0.2}}
+    ]},
+    {"name": "terminal", "description": "green letters on black", "effects": [
+      {"effect": "ascii", "params": {"mode": "tint", "tint": [0.2, 1.0, 0.4], "gain": 2.2, "background": 0.25}},
+      {"effect": "scanlines", "params": {"strength": 0.25}},
+      {"effect": "curvature", "params": {"amount": 0.15}}
+    ]},
+    {"name": "matrix", "description": "falling-code green: letters that glow", "effects": [
+      {"effect": "ascii", "params": {"mode": "tint", "tint": [0.1, 1.0, 0.2], "size": 10.0, "gain": 2.6, "background": 0.15}},
+      {"effect": "bloom", "params": {"threshold": 0.3, "intensity": 1.0, "radius": 12.0, "tint": [0.3, 1.0, 0.4]}}
+    ]},
+    {"name": "pixelart", "description": "chunky pixels and a few colors", "effects": [
+      {"effect": "lowres", "params": {"height": 270.0, "levels": 8, "dither": 0.5}},
+      {"effect": "saturation", "params": {"amount": 1.2}}
+    ]},
+
+    {"name": "pencil", "description": "a pencil drawing on paper", "effects": [
+      {"effect": "sketch"}
+    ]},
+    {"name": "comic", "description": "flat colors, black outlines and print dots", "effects": [
+      {"effect": "saturation", "params": {"amount": 1.4}},
+      {"effect": "toon", "params": {"levels": 3, "softness": 0.1}},
+      {"effect": "halftone", "params": {"size": 7.0, "mix": 0.3}}
+    ]},
+    {"name": "halftone", "description": "dots of four inks, like a printed page", "effects": [
+      {"effect": "halftone"}
+    ]},
+    {"name": "crosshatch", "description": "a pen drawing made of crossing lines", "effects": [
+      {"effect": "crosshatch"}
+    ]},
+    {"name": "stipple", "description": "a drawing made of dots", "effects": [
+      {"effect": "stipple"}
+    ]},
+    {"name": "blueprint", "description": "white lines on blue paper", "effects": [
+      {"effect": "edge", "params": {"strength": 3.0, "color": [0.85, 0.93, 1.0], "background": [0.04, 0.2, 0.5], "keep": 0.25}},
+      {"effect": "vignette", "params": {"amount": 0.3}}
+    ]},
+    {"name": "ascii", "description": "the picture drawn with letters", "effects": [
+      {"effect": "ascii"}
+    ]},
+
+    {"name": "nightvision", "description": "green night vision goggles", "effects": [
+      {"effect": "nightvision"}
+    ]},
+    {"name": "thermal", "description": "a heat camera", "effects": [
+      {"effect": "thermal"}
+    ]},
+    {"name": "xray", "description": "an x-ray picture", "effects": [
+      {"effect": "xray"}
+    ]},
+    {"name": "infrared", "description": "an infrared photo: plants glow white", "effects": [
+      {"effect": "infrared"}
+    ]},
+    {"name": "neon", "description": "glowing neon outlines on dark", "effects": [
+      {"effect": "neon"},
+      {"effect": "bloom", "params": {"threshold": 0.4, "intensity": 0.8, "radius": 14.0}}
+    ]},
+
+    {"name": "rain", "description": "cold, grey and rainy, with distant lightning", "effects": [
+      {"effect": "temperature", "params": {"warmth": -0.25}},
+      {"effect": "saturation", "params": {"amount": 0.7}},
+      {"effect": "rain", "params": {"density": 0.6}},
+      {"effect": "flash", "params": {"rate": 0.12, "decay": 8.0, "color": [0.8, 0.85, 1.0], "strength": 0.5}},
+      {"effect": "vignette", "params": {"amount": 0.4}}
+    ]},
+    {"name": "snowfall", "description": "cold, quiet snow", "effects": [
+      {"effect": "temperature", "params": {"warmth": -0.2}},
+      {"effect": "saturation", "params": {"amount": 0.8}},
+      {"effect": "snow", "params": {"density": 0.45}},
+      {"effect": "vignette", "params": {"amount": 0.3}}
+    ]},
+    {"name": "fireflies", "description": "glowing specks floating in the air", "effects": [
+      {"effect": "dust", "params": {"density": 0.6, "size": 7.0, "color": [1.0, 0.95, 0.5], "opacity": 1.0}},
+      {"effect": "bloom", "params": {"threshold": 0.5, "intensity": 1.6, "radius": 20.0}},
+      {"effect": "vignette", "params": {"amount": 0.4}}
+    ]},
+
+    {"name": "underwater", "description": "under the surface: wobbling, blue-green, light patterns", "effects": [
+      {"effect": "underwater"},
+      {"effect": "blur", "params": {"radius": 2.0}},
+      {"effect": "vignette", "params": {"amount": 0.3}}
+    ]},
+    {"name": "drunk", "description": "the world sways and swims", "effects": [
+      {"effect": "noisewarp", "params": {"amount": 30.0, "scale": 2.0, "flow": 0.5}},
+      {"effect": "sway", "params": {"angle": 3.0}},
+      {"effect": "chromatic", "params": {"amount": 1.5}},
+      {"effect": "blur", "params": {"radius": 3.0}}
+    ]},
+    {"name": "acid", "description": "colors that never stop turning, and wavy", "effects": [
+      {"effect": "hue", "params": {"shift": 0.0, "cycle": 90.0}},
+      {"effect": "saturation", "params": {"amount": 2.0}},
+      {"effect": "wave", "params": {"amount": 15.0, "frequency": 4.0}},
+      {"effect": "chromatic", "params": {"amount": 1.5}}
+    ]},
+    {"name": "kaleido", "description": "a slowly turning kaleidoscope", "effects": [
+      {"effect": "kaleidoscope", "params": {"segments": 8, "spin": 10.0}}
+    ]},
+    {"name": "vaporwave", "description": "pink and cyan, glowing, with scanlines", "effects": [
+      {"effect": "saturation", "params": {"amount": 1.4}},
+      {"effect": "gradient", "params": {"start": [1.0, 0.25, 0.85], "end": [0.15, 0.85, 1.0], "angle": 90.0, "blend": "softlight", "opacity": 0.9}},
+      {"effect": "bloom", "params": {"threshold": 0.6, "intensity": 0.8}},
+      {"effect": "chromatic", "params": {"amount": 0.8}},
+      {"effect": "scanlines", "params": {"strength": 0.2}}
+    ]},
+    {"name": "disco", "description": "turning colors and a beat", "effects": [
+      {"effect": "hue", "params": {"shift": 0.0, "cycle": 120.0}},
+      {"effect": "zoompulse", "params": {"amount": 0.05, "rate": 2.0}},
+      {"effect": "bloom", "params": {"threshold": 0.5, "intensity": 0.7}},
+      {"effect": "vignette", "params": {"amount": 0.4}}
+    ]},
+    {"name": "tiny-planet", "description": "the world wrapped around into a ball", "effects": [
+      {"effect": "polar"}
+    ]},
+    {"name": "fisheye", "description": "a fisheye lens", "effects": [
+      {"effect": "fisheye"},
+      {"effect": "vignette", "params": {"amount": 0.4}}
+    ]},
+    {"name": "toy-model", "description": "only a strip is sharp, the colors are strong: everything looks like a toy", "effects": [
+      {"effect": "tiltshift"}
+    ]},
+
+    {"name": "glitch", "description": "a broken digital picture", "effects": [
+      {"effect": "glitch"},
+      {"effect": "rgbsplit", "params": {"distance": 4.0}},
+      {"effect": "scanlines", "params": {"strength": 0.2}}
+    ]},
+    {"name": "earthquake", "description": "the camera shakes hard", "effects": [
+      {"effect": "shake", "params": {"amount": 25.0, "rotation": 1.5, "rate": 30.0}}
+    ]},
+    {"name": "zoom-beat", "description": "a thump that zooms and splits the colors, twice a second", "effects": [
+      {"effect": "zoompulse", "params": {"amount": 0.08, "rate": 2.0}},
+      {"effect": "chromatic", "params": {"amount": 1.0}}
+    ]},
+
+    {"name": "dither-color", "description": "a few colors per channel, with a 4x4 pattern", "effects": [
+      {"effect": "dither", "params": {"type": "bayer4", "levels": 4, "size": 2.0, "mode": "color"}}
+    ]},
+    {"name": "dither-print", "description": "two colors drawn with round dots, like a newspaper", "effects": [
+      {"effect": "dither", "params": {"type": "cluster", "levels": 2, "size": 1.5, "mode": "mono", "dark": [0.08, 0.07, 0.1], "light": [0.97, 0.95, 0.88], "scale": 8.0}}
+    ]},
+    {"name": "dither-lines", "description": "two colors drawn with slanted lines", "effects": [
+      {"effect": "dither", "params": {"type": "lines", "levels": 2, "size": 1.5, "mode": "mono", "dark": [0.0, 0.05, 0.1], "light": [0.9, 1.0, 0.95], "scale": 6.0}}
+    ]}
+  ]
+}

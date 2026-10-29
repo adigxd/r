@@ -5,6 +5,9 @@ git.py
 maps/*.json.bak
 maps/*.json.tmp
 
+# the temporary file of a shader being saved
+shaders/custom/*.tmp
+
 .DS_Store
 Thumbs.db
 desktop.ini

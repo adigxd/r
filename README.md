@@ -29,7 +29,8 @@ python r.py [map]
 | Escape / Backspace | Back to the spawn of the map (Escape closes the chat first, if it is open) |
 | T | Open the chat (Enter sends, Escape closes, Tab finishes a command name, Up / Down bring back what you sent, Page Up / Page Down scroll) |
 | F11 | Toggle fullscreen |
-| Backslash (`\`) | Cycle post-processing shader |
+| Backslash (`\`) | Next shader (Shift + Backslash: the previous one), round and round: the built-in ones, then yours |
+| `]` | Open / close the menu of effects (the mouse becomes a pointer while it is open) |
 | Backquote (`` ` ``) | Save screenshot |
 | Right Ctrl | Toggle wireframe debug mode |
 | Right Shift | Exit (not while the chat is open: it is a letter there) |
@@ -108,15 +109,36 @@ If a setting is missing or has a typo, the game says which one and exits.
 | `loading.py` | The loading bar shown while the map builds |
 | `rend.py` | The editing commands (`.set`, `.undo`, ...), what they do to the blocks, undo / redo and saving the edits into the map file |
 | `chat.py` | The chat: typing, messages and drawing them (in JetBrains Mono) |
+| `uidraw.py` | Draws rectangles and text over the picture (the chat and the menu of effects share it) |
+| `effects/` | The menu of full-screen effects: every effect is a piece of GLSL with its settings (`color.py`, `retro.py`, `blur.py`, `edges.py`, `distort.py`, `overlay.py`); `python -m effects` writes `SHADERS.md` |
+| `fx.py` | The effects on the screen (the stack, with undo), how typed values are understood, and the library of shaders (built in and yours) |
+| `fxcommands.py` | The chat commands `.fx` and `.shader` |
+| `fxrender.py` | Draws the stack: one full-screen pass after another |
+| `gui.py` | The menu of effects (`]`) |
 | `selection.py` | Draws the box of the rend selection |
 | `uniforms.py` | Shader uniform values (matrices, lights, ...) |
 | `log.py` | Console logging |
 | `.env.pre` | Default settings for every map |
 | `maps/` | Map files (their settings, lights and blocks) |
-| `shaders/` | GLSL shaders (`block.*` for the world, `post_*.frag` for post-processing) |
+| `shaders/` | `block.*` (the world), `post.vert` (the full-screen quad of the effects), `ui.*` and `line.*` (chat, menu, selection), `defaults.json` (the built-in shaders) and `custom/` (yours, made in the game) |
 | `resources/` | Texture atlas, window icon, music, the chat font |
 | `COMMANDS.md` | Guide to every rend command, with examples |
+| `SHADERS.md` | Guide to the shaders: every command, every effect and every setting |
 | `CHANGELOG.md` | Version history |
+
+### Shaders (the look of the picture):
+
+The whole picture goes through a **shader**: a stack of effects (about 100: colors, dithering, blur, edges, bending, vignette, weather, ...) that you build in the game, with no code. **Backslash** goes through every shader (46 are built in, from `default`, the picture as it is, to `crt`, `vhs`, `noir`, `halftone`, `underwater` ...; yours come after them), **`]`** opens a menu to build one with the mouse, and the chat commands do the same:
+
+```
+.fx add vignette amount=0.6      an effect on top of the stack
+.fx add dither bayer8 4 2        the same, with only the values (in the order .fx info dither lists them)
+.fx up 1                         the order matters: move it up (applied after more of the others)
+.shader save my-look             keep it: it joins the list Backslash goes through, on every map
+.fx clear                        nothing on the screen
+```
+
+**[SHADERS.md](SHADERS.md) has the guide: every command, every effect with all its settings, the built-in shaders, and the file format of your own.** The shaders are not tied to a map.
 
 ### Rend (editing the world in the game):
 
@@ -138,3 +160,6 @@ Press T and type a command that starts with a `.` (anything else you send is a c
 ### To-Do:
 - Advanced tree functions (including the `WINDSWEPT` tree, which is a placeholder in `world.py`)
 - Place and destroy blocks (first on a hotkey at a position, eventually at the end of a directed ray); `World.edit` (remakes only the changed chunks) and `World.raycast` (the block you look at) are there for it, and it should become a rend op so it can be undone and saved
+- Effects that need the depth of the scene (fog, depth of field, outlines of depth, ambient occlusion, a tint or a scan by depth): the depth buffer has to be readable as a texture
+- Effects that need the previous frame (trails, motion blur, ghosts, feedback): a copy of the last picture has to be kept
+- Interactable blocks, and shaders that belong to single blocks (every block would carry a material for it)

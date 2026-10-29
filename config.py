@@ -117,14 +117,6 @@ def env_flag(val):
 
     raise ValueError('needs true or false')
 
-def env_path_list(val):
-    paths = [path.strip() for path in str(val).split(',') if path.strip()]
-
-    if not paths:
-        raise ValueError('needs at least one path')
-
-    return paths
-
 FALLOFFS = {'linear': 0, 'inverse_square': 1} # how a light fades with distance; the number is what the shader gets
 
 def falloff(val):
@@ -190,6 +182,9 @@ ENV_SETTINGS = {
     'CHAT_HISTORY': positive_int,
     'CHAT_FADE_TIME': positive,
     'CHAT_WIDTH': fraction,
+    'GUI_WIDTH': fraction,
+    'GUI_ALPHA': fraction,
+    'GUI_FONT_SIZE': positive_int,
     'CHUNK_SIZE': power_of_two,
     'GLASS_SORT_DISTANCE': positive,
     'LOADING_BAR_FPS': positive_int,
@@ -212,7 +207,9 @@ ENV_SETTINGS = {
     'UI_FRAGMENT_SHADER': str,
     'LINE_VERTEX_SHADER': str,
     'LINE_FRAGMENT_SHADER': str,
-    'POST_FRAGMENT_SHADERS': env_path_list,
+    'SHADER_DEFAULTS': str,
+    'SHADER_DIR': str,
+    'FX_UNDO_STEPS': positive_int,
 
     'SCREENSHOT_DIR': str,
     'MUSIC_DIR': str,

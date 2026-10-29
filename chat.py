@@ -1,32 +1,29 @@
-import ctypes
 import time
 
-import numpy as np
-from OpenGL.GL import *
 import pygame
 
-import log
+from uidraw import Painter, clipboard_text
 
 # the chat: T opens it, Enter sends what was typed, Escape closes it
 # a line that starts with a . is a rend command (see rend.py); anything else is a chat message
-# it is drawn over the finished picture (after the post-processing), as rectangles and text; the text is drawn by pygame into a picture that is put on a rectangle
+# it is drawn over the finished picture (after the post-processing), as rectangles and text (uidraw.py)
 
 COLORS = {'chat': (1.0, 1.0, 1.0), 'ok': (0.6, 1.0, 0.65), 'info': (0.85, 0.85, 0.85), 'error': (1.0, 0.45, 0.45), 'command': (0.75, 0.9, 1.0)}
 MAX_TEXT = 256 # the longest line that can be typed
 
 
 class Chat:
-    def __init__(self, program, font_path, font_size, lines, history, fade_time, width, commands=()):
+    def __init__(self, program, font_path, font_size, lines, history, fade_time, width, commands=(), completer=None):
         # program: the shader of ui.vert / ui.frag (None: no drawing, only the typing and the messages, for tests)
         # font_size is for a window 1080 high; lines are shown while the chat is closed; history is how many lines are remembered; fade_time how long a message stays; width is a share of the window
-        self.program = program
-        self.font_path = font_path
+        self.painter = Painter(program, font_path) # also used by the menu of effects
         self.font_size = font_size
         self.lines = lines
         self.history = history
         self.fade_time = fade_time
         self.width = width
         self.commands = sorted(commands) # the names of the commands, for Tab
+        self.completer = completer # completer(words, current): the words that can come after the words of a command typed so far, for Tab (None: only the names of commands are finished)
         self.open = False
         self.text = ''
         self.cursor = 0
@@ -35,21 +32,7 @@ class Chat:
         self.messages = [] # (kind, text, time)
         self.scroll = 0 # how many lines back from the newest the chat is scrolled
         self.ignore_text = None # (text, until): the letter that opened the chat arrives as typing too, and must not be in the line
-        self.fonts = {}
-        self.textures = {} # (size, text) -> (texture, width, height)
         self.wrap_memory = None # (what was asked, the rows) of the last wrap_input
-
-        if program is not None:
-            self.vao = glGenVertexArrays(1)
-            self.vbo = glGenBuffers(1)
-            glBindVertexArray(self.vao)
-            glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
-            glBufferData(GL_ARRAY_BUFFER, 6 * 4 * 4, None, GL_DYNAMIC_DRAW)
-            glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 16, None)
-            glEnableVertexAttribArray(0)
-            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 16, ctypes.c_void_p(8))
-            glEnableVertexAttribArray(1)
-            glBindVertexArray(0)
 
     # --- messages
 
@@ -111,12 +94,22 @@ class Chat:
         return i
 
     def complete(self):
-        # Tab: finish the name of a command
-        if not self.text.startswith('.') or ' ' in self.text[:self.cursor]:
+        # Tab: finish the name of a command, or the word of a command that is being typed (the completer says which words can come)
+        if not self.text.startswith('.'):
             return
 
-        start = self.text[1:self.cursor].lower()
-        matches = [name for name in self.commands if name.startswith(start)]
+        words = self.text[:self.cursor].split(' ')
+        current = words.pop() # the word the cursor is in (empty right after a space)
+
+        if not words:
+            lead = '.'
+            matches = [name for name in self.commands if name.startswith(current[1:].lower())]
+            shown = ['.' + name for name in matches]
+        elif self.completer is not None:
+            lead = ''
+            matches = shown = self.completer(words, current)
+        else:
+            return
 
         if not matches:
             return
@@ -124,14 +117,15 @@ class Chat:
         common = matches[0]
 
         for name in matches[1:]:
-            while not name.startswith(common):
+            while not name.lower().startswith(common.lower()):
                 common = common[:-1]
 
-        self.text = '.' + common + self.text[self.cursor:]
-        self.cursor = 1 + len(common)
+        start = self.cursor - len(current)
+        self.text = self.text[:start] + lead + common + self.text[self.cursor:]
+        self.cursor = start + len(lead) + len(common)
 
         if len(matches) > 1:
-            self.add('info', ' '.join('.' + name for name in matches))
+            self.add('info', ' '.join(shown))
 
     def handle(self, event, now=None):
         # one event while the chat is open; returns the line to run if Enter was pressed on one, otherwise None
@@ -203,53 +197,14 @@ class Chat:
         elif key == pygame.K_TAB:
             self.complete()
         elif key == pygame.K_v and ctrl:
-            self.insert(self.clipboard_text())
+            self.insert(clipboard_text())
 
         return None
-
-    def clipboard_text(self):
-        try:
-            pygame.scrap.init()
-            data = pygame.scrap.get_text()
-
-            return data.replace('\r', ' ').replace('\n', ' ') if data else ''
-        except Exception:
-            return ''
 
     # --- drawing
 
     def font(self, size):
-        if size not in self.fonts:
-            try:
-                self.fonts[size] = pygame.font.Font(self.font_path, size)
-            except Exception as e:
-                log.error('Chat font failed to load, using the default one', path=self.font_path, error=e)
-                self.fonts[size] = pygame.font.Font(None, size)
-
-        return self.fonts[size]
-
-    def texture(self, size, text):
-        # the text as a picture on the graphics card: white, with its shape in the alpha (the color comes from the shader); remembered
-        key = (size, text)
-
-        if key not in self.textures:
-            if len(self.textures) > 600:
-                glDeleteTextures([t[0] for t in self.textures.values()])
-                self.textures.clear()
-
-            surface = self.font(size).render(text, True, (255, 255, 255))
-            width, height = surface.get_size()
-            texture = glGenTextures(1)
-            glBindTexture(GL_TEXTURE_2D, texture)
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pygame.image.tostring(surface, 'RGBA', False))
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-            self.textures[key] = (texture, width, height)
-
-        return self.textures[key]
+        return self.painter.font(size)
 
     def wrap(self, text, font, max_width):
         # the text cut into rows that fit; breaks at spaces, and inside a word that is too long for a row
@@ -317,19 +272,6 @@ class Chat:
 
         return rows
 
-    def quad(self, x, y, w, h, color, texture=None):
-        # a rectangle in pixels from the top left; with a texture it is the picture of some text
-        data = np.array([x, y, 0, 0, x + w, y, 1, 0, x + w, y + h, 1, 1, x, y, 0, 0, x + w, y + h, 1, 1, x, y + h, 0, 1], dtype=np.float32)
-        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
-        glBufferSubData(GL_ARRAY_BUFFER, 0, data.nbytes, data)
-        glUniform4f(glGetUniformLocation(self.program, 'u_color'), *color)
-        glUniform1i(glGetUniformLocation(self.program, 'u_textured'), 0 if texture is None else 1)
-
-        if texture is not None:
-            glBindTexture(GL_TEXTURE_2D, texture)
-
-        glDrawArrays(GL_TRIANGLES, 0, 6)
-
     def draw(self, width, height, now=None):
         # the messages (the newest at the bottom) and, while it is open, the line being typed
         now = time.time() if now is None else now
@@ -367,43 +309,28 @@ class Chat:
         if not rows and not self.open:
             return
 
-        glUseProgram(self.program)
-        glUniform2f(glGetUniformLocation(self.program, 'u_screen'), width, height)
-        glDisable(GL_DEPTH_TEST)
-        glDisable(GL_CULL_FACE)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glActiveTexture(GL_TEXTURE0)
-        glUniform1i(glGetUniformLocation(self.program, 'u_texture'), 0)
-        glBindVertexArray(self.vao)
+        painter = self.painter
+        painter.begin(width, height)
 
         bottom = height - margin - input_h
 
         for i, (kind, text, alpha) in enumerate(rows):
             y = bottom - (i + 1) * line_h
 
-            self.quad(margin, y, box_w, line_h, (0, 0, 0, 0.45 * alpha))
-
-            if text:
-                texture, tw, th = self.texture(size, text)
-                self.quad(margin + pad, y, tw, th, (*COLORS.get(kind, COLORS['chat']), alpha), texture)
+            painter.rect(margin, y, box_w, line_h, (0, 0, 0, 0.45 * alpha))
+            painter.text(margin + pad, y, text, size, (*COLORS.get(kind, COLORS['chat']), alpha))
 
         if self.open:
             y = height - margin - input_h
-            self.quad(margin, y, box_w, input_h, (0, 0, 0, 0.7))
+            painter.rect(margin, y, box_w, input_h, (0, 0, 0, 0.7))
             color = COLORS['command'] if self.text.startswith('.') else COLORS['chat']
 
             for i, (start, end) in enumerate(input_rows):
-                if end > start:
-                    texture, tw, th = self.texture(size, self.text[start:end])
-                    self.quad(margin + pad, y + pad + i * line_h, tw, th, (*color, 1.0), texture)
+                painter.text(margin + pad, y + pad + i * line_h, self.text[start:end], size, (*color, 1.0))
 
             if int(now * 2) % 2 == 0: # the caret blinks
                 caret_row = max(i for i, (start, end) in enumerate(input_rows) if start <= self.cursor)
                 caret_x = margin + pad + font.size(self.text[input_rows[caret_row][0]:self.cursor])[0]
-                self.quad(caret_x, y + pad + caret_row * line_h, max(2, round(2 * scale)), line_h, (1, 1, 1, 0.9))
+                painter.rect(caret_x, y + pad + caret_row * line_h, max(2, round(2 * scale)), line_h, (1, 1, 1, 0.9))
 
-        glBindVertexArray(0)
-        glDisable(GL_BLEND)
-        glEnable(GL_DEPTH_TEST)
-        glEnable(GL_CULL_FACE)
+        painter.end()

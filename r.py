@@ -17,7 +17,11 @@ from camera import Camera
 from chat import Chat
 import chunks
 import config
+import fx
+from fxcommands import FxCommands
+from fxrender import FxRenderer
 import glsl
+from gui import Gui
 from lights import LightSet
 from loading import LoadingBar, Cancelled
 import log
@@ -234,20 +238,14 @@ def main(map_name):
         pygame.quit()
         exit()
 
-    post_programs = [] # every post-processing shader that built, in the order they cycle
-    post_index = 0
-
-    for path in settings.post_fragment_shaders:
-        post_program = glsl.build_program(post_vertex_source, glsl.read_source(path))
-
-        if post_program: # a shader that failed has already printed why, and just isn't in the cycle
-            post_programs.append(post_program)
-
-    if not post_programs:
-        pygame.quit()
-        exit()
-
     post_vao, post_vbo, post_ebo = buffers.make_post_quad() # post-processing buffer objects for full-screen quad
+
+    # the full-screen effects: the shaders you can choose from (built in, and your own), the effects that are on the screen now, the chat commands for them, and what draws them
+    # (see fx.py and the effects folder; Backslash goes through the shaders, the game starts on the first one)
+    fx_library = fx.Library(settings.shader_defaults, settings.shader_dir)
+    fx_state = fx.Fx(fx_library, settings.fx_undo_steps)
+    fx_commands = FxCommands(fx_state)
+    fx_renderer = FxRenderer(post_vertex_source, post_vao, width, height)
 
     # the shaders of the chat and of the box of the selection
     ui_program = glsl.build_program(glsl.read_source(settings.ui_vertex_shader), glsl.read_source(settings.ui_fragment_shader))
@@ -263,8 +261,18 @@ def main(map_name):
 
     # rend (the editing of the world) and the chat it is typed into
     rend_state = rend.Rend(world, BLOCK_TYPES, settings.edits, settings.map_path, settings.rend_max_blocks, settings.rend_undo_blocks)
-    chat = Chat(ui_program, settings.chat_font, settings.chat_font_size, settings.chat_lines, settings.chat_history, settings.chat_fade_time, settings.chat_width, [name for name in rend.HELP])
+    chat = Chat(ui_program, settings.chat_font, settings.chat_font_size, settings.chat_lines, settings.chat_history, settings.chat_fade_time, settings.chat_width, [name for name in rend.HELP] + ['fx', 'shader'], fx_commands.complete)
     selection_box = SelectionBox(line_program)
+
+    # the menu of effects, opened with ] (it does what .fx and .shader do, on the same state; what it does that matters is said in the chat too)
+    gui = Gui(chat.painter, fx_state, chat.add, settings.gui_font_size, settings.gui_width, settings.gui_alpha)
+
+    def apply_mouse(focused=None):
+        # the game holds the mouse (it is invisible and turns the view) unless the window doesn't have the focus or the menu is open, then it is a pointer
+        hold = (pygame.key.get_focused() if focused is None else focused) and not gui.open
+        pygame.event.set_grab(hold)
+        pygame.mouse.set_visible(not hold)
+        pygame.mouse.get_rel() # throw away the movement in between
 
     class Player:
         # what a rend command can ask about the player
@@ -284,7 +292,25 @@ def main(map_name):
             camera.set_pos(list(settings.start_pos))
 
     player = Player()
-    chat.add('info', 'T opens the chat, .help lists the rend commands')
+    chat.add('info', 'T opens the chat, ] opens the menu of effects, .help lists the commands')
+
+    def run_command(line):
+        # a line that starts with a . : the effects (.fx, .shader) or rend (everything else)
+        words = line.split()
+        name = words[0].lower()
+
+        if name in ('.fx', '.shader'):
+            return fx_commands.run(line)
+
+        if name == '.help' and len(words) > 1 and words[1].lower().lstrip('.') in ('fx', 'shader'):
+            return fx_commands.help_lines(words[1].lower().lstrip('.'))
+
+        results = rend_state.run(line, player)
+
+        if name == '.help' and len(words) == 1:
+            results.append(('info', 'the look of the picture has its own commands: .fx (effects) and .shader (saved looks), see .help fx and .help shader'))
+
+        return results
 
     # ------
 
@@ -303,6 +329,7 @@ def main(map_name):
     ticker = Ticker(settings.tick_rate, settings.max_frame_time)
     lights_warned = False
     had_focus = True # the mouse was just grabbed; the loop notices if the window doesn't actually have the focus
+    shader_seen = None # the shader the effects of the neighbours were last got ready for
 
     while True:
         for event in pygame.event.get():
@@ -312,7 +339,7 @@ def main(map_name):
 
                     if line is not None:
                         if line.startswith('.'):
-                            for kind, text in rend_state.run(line, player):
+                            for kind, text in run_command(line):
                                 if kind == 'clear':
                                     chat.clear()
                                 else:
@@ -322,6 +349,16 @@ def main(map_name):
 
                     continue
 
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHTBRACKET and not chat.open and not gui.typing():
+                gui.toggle()
+                apply_mouse()
+                camera.set_speed(settings.speed) # (a mouse button let go while the menu was in the way would leave sprinting on)
+
+                continue
+
+            if gui.handle(event): # while the menu is open the mouse (and the typing into one of its lines) belongs to it
+                continue
+
             if wants_exit(event):
                 # cleanup and exit
                 if rend_state.unsaved():
@@ -329,9 +366,7 @@ def main(map_name):
 
                 pygame.mixer.music.stop()
 
-                for program in post_programs:
-                    glDeleteProgram(program)
-
+                fx_renderer.delete()
                 glDeleteProgram(block_program)
                 buffers.delete_framebuffer(fbo, fbo_texture, rbo)
                 glDeleteVertexArrays(1, [post_vao])
@@ -348,13 +383,12 @@ def main(map_name):
                 # switch between fullscreen and windowed; the window changes size, which the loop below notices and handles
                 # (OpenGL objects like textures, shaders and buffers survive the switch, only the frame buffer and the projection depend on the size)
                 pygame.display.toggle_fullscreen()
-
-                pygame.mouse.set_visible(False)
-                pygame.event.set_grab(True)
+                apply_mouse(True)
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_BACKSLASH:
-                # cycle through post-processing effects
-                post_index = (post_index + 1) % len(post_programs)
+                # the next shader (built in ones first, then yours; Shift goes back), round and round
+                shader_name = fx_state.cycle(-1 if event.mod & pygame.KMOD_SHIFT else 1)
+                chat.add('info', f'shader {fx_library.names().index(shader_name) + 1}/{len(fx_library.names())}: {shader_name}')
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_BACKQUOTE:
                 # do it like this to ensure post-processing effects in frame buffer are captured
@@ -412,19 +446,17 @@ def main(map_name):
 
         if has_focus != had_focus:
             had_focus = has_focus
-            pygame.event.set_grab(has_focus)
-            pygame.mouse.set_visible(not has_focus)
-            pygame.mouse.get_rel() # throw away the movement in between
+            apply_mouse(has_focus)
             camera.set_speed(settings.speed) # letting go of the right mouse button in another window never reaches the game, so sprinting would stay on
 
         mouse_rel = pygame.mouse.get_rel() # get the relative movement of the mouse since the last call to this function
 
-        if not has_focus:
-            mouse_rel = (0, 0) # the mouse moving over the window while another window has the focus is not looking around
+        if not has_focus or gui.open:
+            mouse_rel = (0, 0) # the mouse moving over the window while another window has the focus, or over the menu, is not looking around
 
         keys = pygame.key.get_pressed() # get the current state of all keyboard buttons
 
-        if chat.open: # typing: the player stands still and the view doesn't turn (gravity goes on)
+        if chat.open or gui.typing(): # typing: the player stands still and the view doesn't turn (gravity goes on)
             keys = NoKeys()
             mouse_rel = (0, 0)
 
@@ -479,23 +511,19 @@ def main(map_name):
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        post_program = post_programs[post_index]
+        if fx_state.current != shader_seen: # a shader was chosen: the effects of the next and the previous one are compiled in the next frames (one each), so going on with Backslash doesn't stutter
+            shader_seen = fx_state.current
+            fx_renderer.prepare(fx_state.neighbor_effects())
 
-        glUseProgram(post_program)
-        glDisable(GL_DEPTH_TEST) # disable depth testing for post-processing effects
+        fx_renderer.render(fbo_texture, fx_state.stack, frame_time, width, height) # the effects on the screen, one full-screen pass after another, the last one into the window (no effects: the scene is copied)
 
-        # Bind the FBO texture
-        glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_2D, fbo_texture)
-        uniforms.set_post(post_program, 0, (width, height))
+        for name in fx_renderer.take_failed(): # an effect that didn't compile is left out (the reason is in the console)
+            chat.add('error', f'the effect {name} could not be built, it is skipped (see the console)')
 
-        # Draw the fullscreen quad
-        glBindVertexArray(post_vao)
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, None)
+        glEnable(GL_DEPTH_TEST) # re-enable depth testing (the effects turned it off)
 
-        glEnable(GL_DEPTH_TEST) # re-enable depth testing
-
-        chat.draw(width, height) # the chat is on top of the finished picture
+        gui.draw(width, height) # the menu of effects, if it is open, on top of the finished picture
+        chat.draw(width, height) # and the chat on top of that
 
         pygame.display.flip() # update the display with the rendered frame
 

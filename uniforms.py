@@ -51,11 +51,3 @@ def set_scene(program, atlas_id, lights, lighting, player_pos, weights=None):
 # which of the two passes the block shader is drawing: 0 = opaque blocks and cutouts (a pixel is solid or gone), 1 = translucent blocks (blended with what is behind them)
 def set_translucent(program, translucent):
     glUniform1i(glGetUniformLocation(program, 'u_translucent'), translucent)
-
-# uniforms for post-processing shaders
-def set_post(program, texture_unit, resolution):
-    # set texture uniform for post-processing
-    glUniform1i(glGetUniformLocation(program, 'u_texture'), texture_unit)
-
-    # set resolution uniform
-    glUniform2f(glGetUniformLocation(program, 'u_resolution'), resolution[0], resolution[1])
