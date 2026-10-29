@@ -418,7 +418,7 @@ def main(map_name):
                 if event.button == 3:
                     camera.set_speed(settings.speed)
 
-            if event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE): # back to the spawn of the map
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_BACKSPACE: # back to the spawn of the map
                 camera.set_pos(list(settings.start_pos))
 
         # the window changed size (fullscreen on / off, or anything else the system does to it): everything that has the size of the window has to be made again

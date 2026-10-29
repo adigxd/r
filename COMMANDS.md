@@ -546,7 +546,7 @@ Answer: `went to 0 20 0`.
 .spawn
 ```
 
-Back to the spawn of the map (the same as pressing Escape when the chat is closed).
+Back to the spawn of the map (the same as pressing Backspace when the chat is closed).
 
 ### `.coords`
 

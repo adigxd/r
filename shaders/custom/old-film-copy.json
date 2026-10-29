@@ -1,0 +1,12 @@
+{
+  "name": "old-film-copy",
+  "description": "an old film: brown, grainy, flickering, a little shaky",
+  "effects": [
+    {"effect": "sepia", "params": {"strength": 0.7}},
+    {"effect": "contrast", "params": {"amount": 1.2}},
+    {"effect": "shake", "params": {"amount": 2.0, "rotation": 0.1, "rate": 12.0}},
+    {"effect": "pulse", "params": {"rate": 12.0, "depth": 0.07, "shape": "square"}},
+    {"effect": "grain", "params": {"amount": 0.3, "size": 2.0, "rate": 18.0}},
+    {"effect": "vignette", "params": {"amount": 0.65}}
+  ]
+}

@@ -15,7 +15,7 @@ python r.py [map]
 
 `python r.py heaven` is a bright abstract world with no music: flat and hilly ground, large quartz fields, spires, two huge arches and a ring in the sky, mirrored in x and in z (every quarter is a reflection of the others).
 
-`python r.py parkour` is a giant bunny hop playground: hold W + Space to hop (a jump rises 2.4 blocks), hold the right mouse button to sprint (needed to cross the highway gaps fast, they can be walked as well), Escape (or Backspace) puts you back at the spawn. Climb the Needle in the middle (a spiral of stepping stones, 125 hops up), or take a highway to one of eight districts; falling just puts you on the arena floor.
+`python r.py parkour` is a giant bunny hop playground: hold W + Space to hop (a jump rises 2.4 blocks), hold the right mouse button to sprint (needed to cross the highway gaps fast, they can be walked as well), Backspace puts you back at the spawn. Climb the Needle in the middle (a spiral of stepping stones, 125 hops up), or take a highway to one of eight districts; falling just puts you on the arena floor.
 
 ### Keybinds:
 
@@ -26,7 +26,7 @@ python r.py [map]
 | Right mouse button | Hold to increase movement speed |
 | Space | Fly up in debug mode; jump in normal mode |
 | Left Shift | Fly down in debug mode |
-| Escape / Backspace | Back to the spawn of the map (Escape closes the chat first, if it is open) |
+| Backspace | Back to the spawn of the map (not while typing in the chat or in the menu, where it deletes a letter) |
 | T | Open the chat (Enter sends, Escape closes, Tab finishes a command name, Up / Down bring back what you sent, Page Up / Page Down scroll) |
 | F11 | Toggle fullscreen |
 | Backslash (`\`) | Next shader (Shift + Backslash: the previous one), round and round: the built-in ones, then yours |
