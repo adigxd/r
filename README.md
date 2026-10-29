@@ -137,5 +137,4 @@ Press T and type a command that starts with a `.` (anything else you send is a c
 
 ### To-Do:
 - Advanced tree functions (including the `WINDSWEPT` tree, which is a placeholder in `world.py`)
-- Rend (the in-game worldedit): a chat in JetBrains Mono, opened with T, closed with Esc, sent with Enter; it only takes commands and says so when a command doesn't exist
-- Place and destroy blocks (first on a hotkey at a position, eventually at the end of a directed ray)
+- Place and destroy blocks (first on a hotkey at a position, eventually at the end of a directed ray); `World.edit` (remakes only the changed chunks) and `World.raycast` (the block you look at) are there for it, and it should become a rend op so it can be undone and saved
